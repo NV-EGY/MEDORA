@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrderFlow Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#7a8499;--line:#e8ebf2;
+  --primary:#5b5ce2;--primary2:#7677f0;--success:#16a56b;--warning:#e99a20;
+  --danger:#e04f5f;--info:#2588d9;--shadow:0 10px 30px rgba(28,39,75,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0}
+.app{display:flex;min-height:100vh}
+.sidebar{width:265px;background:#11152a;color:#fff;padding:22px 16px;position:fixed;right:0;top:0;bottom:0;z-index:20;transition:.25s}
+.brand{display:flex;align-items:center;gap:12px;padding:5px 10px 28px}
+.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#6b6ce9,#9a8cff);display:grid;place-items:center;font-weight:900;font-size:18px}
+.brand h2{font-size:18px;margin:0}.brand small{color:#9298b3}
+.nav-title{font-size:11px;color:#717895;margin:17px 12px 9px}
+.nav a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;color:#c7cbe0;text-decoration:none;margin:4px 0;font-size:14px}
+.nav a:hover,.nav a.active{background:rgba(255,255,255,.09);color:#fff}
+.nav a.active{box-shadow:inset -3px 0 0 #8b8cf4}
+.icon{width:22px;text-align:center}
+.main{margin-right:265px;width:calc(100% - 265px);padding:24px 28px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
+.page-title h1{font-size:25px;margin:0 0 5px}.page-title p{margin:0;color:var(--muted);font-size:13px}
+.actions{display:flex;gap:10px;align-items:center}
+.btn{background:var(--card);border:1px solid var(--line);padding:10px 14px;border-radius:10px;color:var(--text)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn:hover{transform:translateY(-1px)}
+.icon-btn{width:42px;height:42px;border-radius:10px;background:var(--card);border:1px solid var(--line);position:relative}
+.dot{position:absolute;width:8px;height:8px;background:var(--danger);border-radius:50%;top:8px;left:8px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow)}
+.stat{padding:18px;position:relative;overflow:hidden}
+.stat-head{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
+.stat-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#f0f0ff;color:var(--primary);font-size:19px}
+.stat h2{font-size:27px;margin:15px 0 7px}
+.change{font-size:12px}.up{color:var(--success)}.down{color:var(--danger)}
+.grid{display:grid;grid-template-columns:1.65fr 1fr;gap:16px;margin-top:18px}
+.panel{padding:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.panel-head h3{font-size:16px;margin:0}.muted{color:var(--muted);font-size:12px}
+.chart-wrap{height:290px}
+.status-list{display:grid;gap:14px}
+.status-row{display:grid;grid-template-columns:95px 1fr 45px;gap:10px;align-items:center;font-size:13px}
+.bar{height:8px;background:#edf0f5;border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;border-radius:99px;background:var(--primary)}
+.status-row:nth-child(2) .bar span{background:var(--success)}
+.status-row:nth-child(3) .bar span{background:var(--warning)}
+.status-row:nth-child(4) .bar span{background:var(--danger)}
+.status-row:nth-child(5) .bar span{background:var(--info)}
+.table-card{margin-top:18px;padding:18px}
+.table-tools{display:flex;gap:10px;align-items:center}
+.search{position:relative}.search input{width:220px;padding:10px 35px 10px 10px;border:1px solid var(--line);border-radius:9px;outline:none}
+.search span{position:absolute;right:11px;top:9px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+th,td{padding:14px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:600;background:#fafbfc}
+.badge{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold}
+.b-success{background:#e9f8f1;color:#0b8b59}.b-warning{background:#fff5df;color:#b87300}
+.b-danger{background:#ffeaed;color:#c83949}.b-info{background:#e9f4ff;color:#1671b9}
+.customer{display:flex;align-items:center;gap:9px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#ececff;color:#5354ca;font-weight:bold}
+.empty{padding:30px;text-align:center;color:var(--muted);display:none}
+.toast{position:fixed;bottom:20px;left:20px;background:#151a2d;color:white;padding:13px 18px;border-radius:10px;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:.3s;z-index:50}.toast.show{transform:translateY(0);opacity:1}
+.mobile-menu{display:none}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:760px){
+.sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}
+.main{margin-right:0;width:100%;padding:18px 14px}.mobile-menu{display:block}
+.topbar{align-items:flex-start}.actions .hide-mobile{display:none}
+.cards{grid-template-columns:1fr 1fr}.stat h2{font-size:22px}.table-card{overflow:auto}
+.search input{width:150px}
+}
+@media(max-width:500px){.cards{grid-template-columns:1fr}.page-title h1{font-size:21px}.actions{gap:5px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="logo">OF</div><div><h2>OrderFlow</h2><small>إدارة الطلبات</small></div></div>
+  <div class="nav-title">الرئيسية</div>
+  <nav class="nav">
+    <a class="active" href="#"><span class="icon">⌂</span>لوحة التحكم</a>
+    <a href="#"><span class="icon">▣</span>الطلبات <b style="margin-right:auto;background:#5b5ce2;padding:2px 7px;border-radius:9px;font-size:10px">24</b></a>
+    <a href="#"><span class="icon">♙</span>العملاء</a>
+    <a href="#"><span class="icon">◈</span>المنتجات</a>
+  </nav>
+  <div class="nav-title">التشغيل</div>
+  <nav class="nav">
+    <a href="#"><span class="icon">▤</span>الفواتير</a>
+    <a href="#"><span class="icon">✓</span>التقفيلات</a>
+    <a href="#"><span class="icon">🚚</span>الشحن</a>
+    <a href="#"><span class="icon">▥</span>التقارير</a>
+  </nav>
+  <div class="nav-title">النظام</div>
+  <nav class="nav">
+    <a href="#"><span class="icon">⚙</span>الإعدادات</a>
+    <a href="#"><span class="icon">◉</span>المستخدمون والصلاحيات</a>
+  </nav>
+</aside>
+
+<main class="main">
+<header class="topbar">
+  <div class="page-title">
+    <button class="btn mobile-menu" onclick="toggleSidebar()">☰</button>
+    <h1>لوحة التحكم</h1><p id="today"></p>
+  </div>
+  <div class="actions">
+    <button class="btn hide-mobile" onclick="refreshData()">↻ تحديث</button>
+    <button class="btn primary hide-mobile" onclick="newOrder()">＋ طلب جديد</button>
+    <button class="icon-btn" onclick="notify()">🔔<span class="dot"></span></button>
+    <button class="icon-btn" onclick="toggleTheme()">☾</button>
+  </div>
+</header>
+
+<section class="cards">
+  <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">▣</span></div><h2 id="orders">1,248</h2><span class="change up">▲ 12.5% <span class="muted">مقارنة بالأسبوع السابق</span></span></div>
+  <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">ج</span></div><h2 id="sales">284,650 ج</h2><span class="change up">▲ 8.7% <span class="muted">مقارنة بالأسبوع السابق</span></span></div>
+  <div class="card stat"><div class="stat-head"><span>تم التسليم</span><span class="stat-icon">✓</span></div><h2>932</h2><span class="change up">▲ 6.2% <span class="muted">معدل نجاح التسليم</span></span></div>
+  <div class="card stat"><div class="stat-head"><span>طلبات ملغاة</span><span class="stat-icon">×</span></div><h2>86</h2><span class="change down">▼ 2.4% <span class="muted">عن الأسبوع السابق</span></span></div>
+</section>
+
+<section class="grid">
+  <div class="card panel">
+    <div class="panel-head"><div><h3>المبيعات والطلبات</h3><span class="muted">آخر 7 أيام</span></div><select class="btn" id="range" onchange="changeRange()"><option>آخر 7 أيام</option><option>آخر 30 يوم</option><option>هذا الشهر</option></select></div>
+    <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+  </div>
+  <div class="card panel">
+    <div class="panel-head"><div><h3>حالات الطلبات</h3><span class="muted">التوزيع الحالي</span></div></div>
+    <div class="status-list">
+      <div class="status-row"><span>جديد</span><div class="bar"><span style="width:62%"></span></div><b>124</b></div>
+      <div class="status-row"><span>قيد التجهيز</span><div class="bar"><span style="width:48%"></span></div><b>96</b></div>
+      <div class="status-row"><span>قيد الشحن</span><div class="bar"><span style="width:34%"></span></div><b>68</b></div>
+      <div class="status-row"><span>ملغي</span><div class="bar"><span style="width:17%"></span></div><b>34</b></div>
+      <div class="status-row"><span>مرتجع</span><div class="bar"><span style="width:10%"></span></div><b>20</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="card table-card">
+  <div class="panel-head">
+    <div><h3>آخر الطلبات</h3><span class="muted">أحدث العمليات على النظام</span></div>
+    <div class="table-tools"><div class="search"><span>⌕</span><input id="search" placeholder="بحث عن طلب..." oninput="filterTable()"></div><button class="btn" onclick="exportCSV()">تصدير CSV</button></div>
+  </div>
+  <table id="ordersTable">
+    <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <tbody>
+      <tr><td>#ORD-1048</td><td><div class="customer"><span class="avatar">م</span>محمد أحمد</div></td><td>2 منتج</td><td>1,250 ج</td><td>اليوم 18:42</td><td><span class="badge b-success">تم التسليم</span></td><td><button class="btn" onclick="viewOrder('#ORD-1048')">عرض</button></td></tr>
+      <tr><td>#ORD-1047</td><td><div class="customer"><span class="avatar">أ</span>أحمد محمود</div></td><td>3 منتجات</td><td>2,480 ج</td><td>اليوم 17:31</td><td><span class="badge b-warning">قيد التجهيز</span></td><td><button class="btn" onclick="viewOrder('#ORD-1047')">عرض</button></td></tr>
+      <tr><td>#ORD-1046</td><td><div class="customer"><span class="avatar">س</span>سارة علي</div></td><td>1 منتج</td><td>890 ج</td><td>اليوم 16:15</td><td><span class="badge b-info">قيد الشحن</span></td><td><button class="btn" onclick="viewOrder('#ORD-1046')">عرض</button></td></tr>
+      <tr><td>#ORD-1045</td><td><div class="customer"><span class="avatar">م</span>محمود حسن</div></td><td>4 منتجات</td><td>3,120 ج</td><td>اليوم 15:06</td><td><span class="badge b-danger">ملغي</span></td><td><button class="btn" onclick="viewOrder('#ORD-1045')">عرض</button></td></tr>
+      <tr><td>#ORD-1044</td><td><div class="customer"><span class="avatar">ن</span>ندى محمد</div></td><td>2 منتج</td><td>1,640 ج</td><td>اليوم 14:22</td><td><span class="badge b-success">تم التسليم</span></td><td><button class="btn" onclick="viewOrder('#ORD-1044')">عرض</button></td></tr>
+    </tbody>
+  </table>
+  <div class="empty" id="empty">لا توجد نتائج مطابقة للبحث.</div>
+</section>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
+  authDomain: "medora-4d7ae.firebaseapp.com",
+  projectId: "medora-4d7ae",
+  storageBucket: "medora-4d7ae.firebasestorage.app",
+  messagingSenderId: "454112159901",
+  appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
+  measurementId: "G-KKPM4D930B"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+const $=id=>document.getElementById(id);
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300)}
+function notify(){toast('لديك 3 إشعارات جديدة')}
+function refreshData(){toast('تم تحديث بيانات لوحة التحكم');}
+function newOrder(){toast('سيتم فتح نموذج إضافة طلب جديد')}
+function viewOrder(id){toast('فتح تفاصيل الطلب '+id)}
+function toggleSidebar(){$('sidebar').classList.toggle('open')}
+function toggleTheme(){
+ const dark=document.body.dataset.dark==='1';
+ document.body.dataset.dark=dark?'0':'1';
+ if(!dark){
+   document.documentElement.style.setProperty('--bg','#0d1020');document.documentElement.style.setProperty('--card','#171b2d');
+   document.documentElement.style.setProperty('--text','#eef0f7');document.documentElement.style.setProperty('--muted','#9299b3');document.documentElement.style.setProperty('--line','#292e43');
+ }else location.reload();
+}
+function filterTable(){
+ const q=$('search').value.toLowerCase();let visible=0;
+ document.querySelectorAll('#ordersTable tbody tr').forEach(r=>{const ok=r.innerText.toLowerCase().includes(q);r.style.display=ok?'':'none';if(ok)visible++});
+ $('empty').style.display=visible?'none':'block';
+}
+function exportCSV(){
+ const rows=[...document.querySelectorAll('#ordersTable tr')].filter(r=>getComputedStyle(r).display!=='none');
+ const csv=rows.map(r=>[...r.cells].map(c=>`"${c.innerText.replaceAll('"','""')}"`).join(',')).join('\\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='orders.csv';a.click();toast('تم تصدير الطلبات');
+}
+function changeRange(){toast('تم تغيير نطاق التقرير إلى '+$('range').value)}
+$('today').textContent=new Intl.DateTimeFormat('ar-EG',{dateStyle:'full'}).format(new Date());
+
+new Chart($('salesChart'),{
+ type:'line',
+ data:{labels:['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'],
+ datasets:[
+ {label:'المبيعات',data:[32000,41000,36000,52000,47000,61000,56500],borderWidth:3,tension:.4,fill:false},
+ {label:'الطلبات',data:[120,145,132,178,165,205,192],borderWidth:2,tension:.4,fill:false}
+ ]},
+ options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+ plugins:{legend:{position:'bottom',labels:{usePointStyle:true,font:{family:'Tahoma'}}}},
+ scales:{y:{grid:{color:'#edf0f5'},ticks:{font:{family:'Tahoma'}}},x:{grid:{display:false},ticks:{font:{family:'Tahoma'}}}}}
+});
+</script>
+</body>
+</html>
