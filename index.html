@@ -1,228 +1,1975 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OrderFlow Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<style>
-:root{
-  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#7a8499;--line:#e8ebf2;
-  --primary:#5b5ce2;--primary2:#7677f0;--success:#16a56b;--warning:#e99a20;
-  --danger:#e04f5f;--info:#2588d9;--shadow:0 10px 30px rgba(28,39,75,.07);
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
-button,input,select{font:inherit}
-button{cursor:pointer;border:0}
-.app{display:flex;min-height:100vh}
-.sidebar{width:265px;background:#11152a;color:#fff;padding:22px 16px;position:fixed;right:0;top:0;bottom:0;z-index:20;transition:.25s}
-.brand{display:flex;align-items:center;gap:12px;padding:5px 10px 28px}
-.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#6b6ce9,#9a8cff);display:grid;place-items:center;font-weight:900;font-size:18px}
-.brand h2{font-size:18px;margin:0}.brand small{color:#9298b3}
-.nav-title{font-size:11px;color:#717895;margin:17px 12px 9px}
-.nav a{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;color:#c7cbe0;text-decoration:none;margin:4px 0;font-size:14px}
-.nav a:hover,.nav a.active{background:rgba(255,255,255,.09);color:#fff}
-.nav a.active{box-shadow:inset -3px 0 0 #8b8cf4}
-.icon{width:22px;text-align:center}
-.main{margin-right:265px;width:calc(100% - 265px);padding:24px 28px}
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:25px}
-.page-title h1{font-size:25px;margin:0 0 5px}.page-title p{margin:0;color:var(--muted);font-size:13px}
-.actions{display:flex;gap:10px;align-items:center}
-.btn{background:var(--card);border:1px solid var(--line);padding:10px 14px;border-radius:10px;color:var(--text)}
-.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.btn:hover{transform:translateY(-1px)}
-.icon-btn{width:42px;height:42px;border-radius:10px;background:var(--card);border:1px solid var(--line);position:relative}
-.dot{position:absolute;width:8px;height:8px;background:var(--danger);border-radius:50%;top:8px;left:8px}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow)}
-.stat{padding:18px;position:relative;overflow:hidden}
-.stat-head{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
-.stat-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#f0f0ff;color:var(--primary);font-size:19px}
-.stat h2{font-size:27px;margin:15px 0 7px}
-.change{font-size:12px}.up{color:var(--success)}.down{color:var(--danger)}
-.grid{display:grid;grid-template-columns:1.65fr 1fr;gap:16px;margin-top:18px}
-.panel{padding:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
-.panel-head h3{font-size:16px;margin:0}.muted{color:var(--muted);font-size:12px}
-.chart-wrap{height:290px}
-.status-list{display:grid;gap:14px}
-.status-row{display:grid;grid-template-columns:95px 1fr 45px;gap:10px;align-items:center;font-size:13px}
-.bar{height:8px;background:#edf0f5;border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;border-radius:99px;background:var(--primary)}
-.status-row:nth-child(2) .bar span{background:var(--success)}
-.status-row:nth-child(3) .bar span{background:var(--warning)}
-.status-row:nth-child(4) .bar span{background:var(--danger)}
-.status-row:nth-child(5) .bar span{background:var(--info)}
-.table-card{margin-top:18px;padding:18px}
-.table-tools{display:flex;gap:10px;align-items:center}
-.search{position:relative}.search input{width:220px;padding:10px 35px 10px 10px;border:1px solid var(--line);border-radius:9px;outline:none}
-.search span{position:absolute;right:11px;top:9px;color:var(--muted)}
-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
-th,td{padding:14px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th{color:var(--muted);font-weight:600;background:#fafbfc}
-.badge{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:bold}
-.b-success{background:#e9f8f1;color:#0b8b59}.b-warning{background:#fff5df;color:#b87300}
-.b-danger{background:#ffeaed;color:#c83949}.b-info{background:#e9f4ff;color:#1671b9}
-.customer{display:flex;align-items:center;gap:9px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#ececff;color:#5354ca;font-weight:bold}
-.empty{padding:30px;text-align:center;color:var(--muted);display:none}
-.toast{position:fixed;bottom:20px;left:20px;background:#151a2d;color:white;padding:13px 18px;border-radius:10px;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:.3s;z-index:50}.toast.show{transform:translateY(0);opacity:1}
-.mobile-menu{display:none}
-@media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
-@media(max-width:760px){
-.sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}
-.main{margin-right:0;width:100%;padding:18px 14px}.mobile-menu{display:block}
-.topbar{align-items:flex-start}.actions .hide-mobile{display:none}
-.cards{grid-template-columns:1fr 1fr}.stat h2{font-size:22px}.table-card{overflow:auto}
-.search input{width:150px}
-}
-@media(max-width:500px){.cards{grid-template-columns:1fr}.page-title h1{font-size:21px}.actions{gap:5px}}
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MEDORA - نظام إدارة الطلبات</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #172033;
+            --muted: #7a8499;
+            --line: #e8ebf2;
+            --primary: #5b5ce2;
+            --success: #16a56b;
+            --warning: #e99a20;
+            --danger: #e04f5f;
+            --info: #2588d9;
+            --shadow: 0 8px 24px rgba(28, 39, 75, 0.08);
+            --radius: 14px;
+            --transition: 0.25s ease;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+        button {
+            cursor: pointer;
+            border: 0;
+            background: none;
+        }
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* ---------- Login ---------- */
+        #loginPage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #11152a, #1b2140);
+            padding: 20px;
+        }
+        .login-box {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 44px 36px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .login-box h2 {
+            font-size: 26px;
+            margin-bottom: 6px;
+            color: #11152a;
+        }
+        .login-box p {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 22px;
+        }
+        .login-box label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            margin: 12px 0 4px;
+            color: #2a2f45;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fafbfc;
+            transition: var(--transition);
+            outline: none;
+            font-size: 14px;
+        }
+        .login-box input:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(91, 92, 226, 0.12);
+        }
+        .login-box .btn-primary {
+            width: 100%;
+            padding: 13px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 18px;
+            transition: var(--transition);
+        }
+        .login-box .btn-primary:hover {
+            background: #4a4bcc;
+            transform: translateY(-1px);
+        }
+        .login-box .error {
+            color: var(--danger);
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+        .login-role {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 14px;
+            text-align: center;
+        }
+        .login-role strong {
+            color: var(--primary);
+        }
+
+        /* ---------- App Layout ---------- */
+        #app {
+            display: none;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 255px;
+            background: #11152a;
+            color: #fff;
+            padding: 20px 14px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 30;
+            transition: var(--transition);
+            overflow-y: auto;
+        }
+        .sidebar .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 10px 26px;
+        }
+        .sidebar .logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #6b6ce9, #9a8cff);
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            font-size: 19px;
+        }
+        .sidebar .brand h2 {
+            font-size: 18px;
+            margin: 0;
+        }
+        .sidebar .brand small {
+            color: #9298b3;
+            font-size: 11px;
+        }
+        .nav-title {
+            font-size: 11px;
+            color: #717895;
+            margin: 18px 12px 8px;
+            letter-spacing: 0.5px;
+        }
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            color: #c7cbe0;
+            margin: 3px 0;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .nav a:hover,
+        .nav a.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+        .nav a.active {
+            box-shadow: inset -3px 0 0 #8b8cf4;
+        }
+        .nav .icon {
+            width: 24px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .badge-nav {
+            margin-right: auto;
+            background: var(--primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+        }
+
+        .main {
+            margin-right: 255px;
+            padding: 22px 28px 40px;
+            min-height: 100vh;
+        }
+
+        /* ---------- Top Bar ---------- */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+        }
+        .page-title h1 {
+            font-size: 24px;
+            margin: 0 0 3px;
+        }
+        .page-title p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: var(--card);
+            border: 1px solid var(--line);
+            padding: 9px 16px;
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 13px;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff !important;
+        }
+        .btn-primary:hover {
+            background: #4a4bcc;
+            border-color: #4a4bcc;
+        }
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff !important;
+        }
+        .btn-danger {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff !important;
+        }
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 12px;
+        }
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            position: relative;
+            font-size: 18px;
+            display: grid;
+            place-items: center;
+        }
+        .dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            top: 8px;
+            left: 8px;
+        }
+        .mobile-menu {
+            display: none;
+        }
+
+        /* ---------- Cards ---------- */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        .card:hover {
+            box-shadow: 0 12px 32px rgba(28, 39, 75, 0.1);
+        }
+        .stat {
+            padding: 18px 20px;
+        }
+        .stat-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: #f0f0ff;
+            color: var(--primary);
+            font-size: 18px;
+        }
+        .stat h2 {
+            font-size: 26px;
+            margin: 12px 0 4px;
+        }
+        .stat .change {
+            font-size: 12px;
+        }
+        .up {
+            color: var(--success);
+        }
+        .down {
+            color: var(--danger);
+        }
+
+        /* ---------- Grid ---------- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .panel {
+            padding: 18px 20px;
+        }
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .panel-head h3 {
+            font-size: 16px;
+            margin: 0;
+        }
+        .panel-head .muted {
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .chart-wrap {
+            height: 260px;
+        }
+
+        /* ---------- Status List ---------- */
+        .status-list {
+            display: grid;
+            gap: 12px;
+        }
+        .status-row {
+            display: grid;
+            grid-template-columns: 85px 1fr 45px;
+            gap: 10px;
+            align-items: center;
+            font-size: 13px;
+        }
+        .bar {
+            height: 8px;
+            background: #edf0f5;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .bar span {
+            display: block;
+            height: 100%;
+            border-radius: 99px;
+            background: var(--primary);
+        }
+
+        /* ---------- Table ---------- */
+        .table-wrap {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th,
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--line);
+            text-align: right;
+            white-space: nowrap;
+        }
+        th {
+            color: var(--muted);
+            font-weight: 600;
+            background: #fafbfc;
+        }
+        .badge {
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-success {
+            background: #e9f8f1;
+            color: #0b8b59;
+        }
+        .badge-warning {
+            background: #fff5df;
+            color: #b87300;
+        }
+        .badge-danger {
+            background: #ffeaed;
+            color: #c83949;
+        }
+        .badge-info {
+            background: #e9f4ff;
+            color: #1671b9;
+        }
+        .badge-secondary {
+            background: #f0f0f0;
+            color: #555;
+        }
+        .customer {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #ececff;
+            color: #5354ca;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .empty {
+            padding: 30px;
+            text-align: center;
+            color: var(--muted);
+            display: none;
+        }
+
+        /* ---------- Forms ---------- */
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fafbfc;
+            outline: none;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(91, 92, 226, 0.08);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* ---------- Modals ---------- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            max-width: 560px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        .modal-box h3 {
+            font-size: 20px;
+            margin-bottom: 18px;
+        }
+        .modal-box .close-modal {
+            float: left;
+            font-size: 22px;
+            color: var(--muted);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .modal-box .close-modal:hover {
+            color: var(--danger);
+        }
+
+        /* ---------- Toast ---------- */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: #151a2d;
+            color: #fff;
+            padding: 14px 22px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: 0.35s ease;
+            z-index: 200;
+            font-size: 14px;
+            max-width: 380px;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 1000px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 760px) {
+            .sidebar {
+                transform: translateX(100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main {
+                margin-right: 0;
+                padding: 16px 14px;
+            }
+            .mobile-menu {
+                display: inline-flex;
+            }
+            .topbar {
+                align-items: flex-start;
+            }
+            .actions .hide-mobile {
+                display: none;
+            }
+            .cards {
+                grid-template-columns: 1fr 1fr;
+            }
+            .stat h2 {
+                font-size: 20px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .modal-box {
+                padding: 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+            .page-title h1 {
+                font-size: 20px;
+            }
+            .actions {
+                gap: 6px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 7px 12px;
+            }
+        }
+
+        .text-muted {
+            color: var(--muted);
+        }
+        .flex {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .gap-1 {
+            gap: 6px;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-<div class="app">
-<aside class="sidebar" id="sidebar">
-  <div class="brand"><div class="logo">OF</div><div><h2>OrderFlow</h2><small>إدارة الطلبات</small></div></div>
-  <div class="nav-title">الرئيسية</div>
-  <nav class="nav">
-    <a class="active" href="#"><span class="icon">⌂</span>لوحة التحكم</a>
-    <a href="#"><span class="icon">▣</span>الطلبات <b style="margin-right:auto;background:#5b5ce2;padding:2px 7px;border-radius:9px;font-size:10px">24</b></a>
-    <a href="#"><span class="icon">♙</span>العملاء</a>
-    <a href="#"><span class="icon">◈</span>المنتجات</a>
-  </nav>
-  <div class="nav-title">التشغيل</div>
-  <nav class="nav">
-    <a href="#"><span class="icon">▤</span>الفواتير</a>
-    <a href="#"><span class="icon">✓</span>التقفيلات</a>
-    <a href="#"><span class="icon">🚚</span>الشحن</a>
-    <a href="#"><span class="icon">▥</span>التقارير</a>
-  </nav>
-  <div class="nav-title">النظام</div>
-  <nav class="nav">
-    <a href="#"><span class="icon">⚙</span>الإعدادات</a>
-    <a href="#"><span class="icon">◉</span>المستخدمون والصلاحيات</a>
-  </nav>
-</aside>
 
-<main class="main">
-<header class="topbar">
-  <div class="page-title">
-    <button class="btn mobile-menu" onclick="toggleSidebar()">☰</button>
-    <h1>لوحة التحكم</h1><p id="today"></p>
-  </div>
-  <div class="actions">
-    <button class="btn hide-mobile" onclick="refreshData()">↻ تحديث</button>
-    <button class="btn primary hide-mobile" onclick="newOrder()">＋ طلب جديد</button>
-    <button class="icon-btn" onclick="notify()">🔔<span class="dot"></span></button>
-    <button class="icon-btn" onclick="toggleTheme()">☾</button>
-  </div>
-</header>
+    <!-- ============ TOAST ============ -->
+    <div class="toast" id="toast"></div>
 
-<section class="cards">
-  <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">▣</span></div><h2 id="orders">1,248</h2><span class="change up">▲ 12.5% <span class="muted">مقارنة بالأسبوع السابق</span></span></div>
-  <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">ج</span></div><h2 id="sales">284,650 ج</h2><span class="change up">▲ 8.7% <span class="muted">مقارنة بالأسبوع السابق</span></span></div>
-  <div class="card stat"><div class="stat-head"><span>تم التسليم</span><span class="stat-icon">✓</span></div><h2>932</h2><span class="change up">▲ 6.2% <span class="muted">معدل نجاح التسليم</span></span></div>
-  <div class="card stat"><div class="stat-head"><span>طلبات ملغاة</span><span class="stat-icon">×</span></div><h2>86</h2><span class="change down">▼ 2.4% <span class="muted">عن الأسبوع السابق</span></span></div>
-</section>
-
-<section class="grid">
-  <div class="card panel">
-    <div class="panel-head"><div><h3>المبيعات والطلبات</h3><span class="muted">آخر 7 أيام</span></div><select class="btn" id="range" onchange="changeRange()"><option>آخر 7 أيام</option><option>آخر 30 يوم</option><option>هذا الشهر</option></select></div>
-    <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
-  </div>
-  <div class="card panel">
-    <div class="panel-head"><div><h3>حالات الطلبات</h3><span class="muted">التوزيع الحالي</span></div></div>
-    <div class="status-list">
-      <div class="status-row"><span>جديد</span><div class="bar"><span style="width:62%"></span></div><b>124</b></div>
-      <div class="status-row"><span>قيد التجهيز</span><div class="bar"><span style="width:48%"></span></div><b>96</b></div>
-      <div class="status-row"><span>قيد الشحن</span><div class="bar"><span style="width:34%"></span></div><b>68</b></div>
-      <div class="status-row"><span>ملغي</span><div class="bar"><span style="width:17%"></span></div><b>34</b></div>
-      <div class="status-row"><span>مرتجع</span><div class="bar"><span style="width:10%"></span></div><b>20</b></div>
+    <!-- ============ LOGIN PAGE ============ -->
+    <div id="loginPage">
+        <div class="login-box">
+            <h2>🔐 MEDORA</h2>
+            <p>نظام إدارة الطلبات – سجل الدخول</p>
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <label>البريد الإلكتروني</label>
+                <input type="email" id="loginEmail" placeholder="example@medora.com" required />
+                <label>كلمة المرور</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" required />
+                <button type="submit" class="btn-primary">تسجيل الدخول</button>
+                <div class="error" id="loginError">بيانات الدخول غير صحيحة</div>
+                <div class="login-role">
+                    📌 <strong>مدير:</strong> admin@medora.com / admin123<br>
+                    📌 <strong>مشرف:</strong> moderator@medora.com / mod123<br>
+                    📌 <strong>مسوق:</strong> marketer@medora.com / market123
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
-</section>
 
-<section class="card table-card">
-  <div class="panel-head">
-    <div><h3>آخر الطلبات</h3><span class="muted">أحدث العمليات على النظام</span></div>
-    <div class="table-tools"><div class="search"><span>⌕</span><input id="search" placeholder="بحث عن طلب..." oninput="filterTable()"></div><button class="btn" onclick="exportCSV()">تصدير CSV</button></div>
-  </div>
-  <table id="ordersTable">
-    <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th></tr></thead>
-    <tbody>
-      <tr><td>#ORD-1048</td><td><div class="customer"><span class="avatar">م</span>محمد أحمد</div></td><td>2 منتج</td><td>1,250 ج</td><td>اليوم 18:42</td><td><span class="badge b-success">تم التسليم</span></td><td><button class="btn" onclick="viewOrder('#ORD-1048')">عرض</button></td></tr>
-      <tr><td>#ORD-1047</td><td><div class="customer"><span class="avatar">أ</span>أحمد محمود</div></td><td>3 منتجات</td><td>2,480 ج</td><td>اليوم 17:31</td><td><span class="badge b-warning">قيد التجهيز</span></td><td><button class="btn" onclick="viewOrder('#ORD-1047')">عرض</button></td></tr>
-      <tr><td>#ORD-1046</td><td><div class="customer"><span class="avatar">س</span>سارة علي</div></td><td>1 منتج</td><td>890 ج</td><td>اليوم 16:15</td><td><span class="badge b-info">قيد الشحن</span></td><td><button class="btn" onclick="viewOrder('#ORD-1046')">عرض</button></td></tr>
-      <tr><td>#ORD-1045</td><td><div class="customer"><span class="avatar">م</span>محمود حسن</div></td><td>4 منتجات</td><td>3,120 ج</td><td>اليوم 15:06</td><td><span class="badge b-danger">ملغي</span></td><td><button class="btn" onclick="viewOrder('#ORD-1045')">عرض</button></td></tr>
-      <tr><td>#ORD-1044</td><td><div class="customer"><span class="avatar">ن</span>ندى محمد</div></td><td>2 منتج</td><td>1,640 ج</td><td>اليوم 14:22</td><td><span class="badge b-success">تم التسليم</span></td><td><button class="btn" onclick="viewOrder('#ORD-1044')">عرض</button></td></tr>
-    </tbody>
-  </table>
-  <div class="empty" id="empty">لا توجد نتائج مطابقة للبحث.</div>
-</section>
-</main>
-</div>
-<div class="toast" id="toast"></div>
+    <!-- ============ APP ============ -->
+    <div id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="logo">M</div>
+                <div>
+                    <h2>MEDORA</h2>
+                    <small id="userRoleDisplay">مدير النظام</small>
+                </div>
+            </div>
+            <div class="nav-title">الرئيسية</div>
+            <nav class="nav" id="mainNav"></nav>
+            <div style="margin-top:30px;border-top:1px solid #292e43;padding-top:16px">
+                <a href="#" onclick="logout()" style="color:#9298b3;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;">
+                    <span>🚪</span> تسجيل الخروج
+                </a>
+            </div>
+        </aside>
 
-<script>
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+        <!-- Main -->
+        <main class="main">
+            <header class="topbar">
+                <div class="page-title">
+                    <button class="btn mobile-menu" onclick="toggleSidebar()">☰</button>
+                    <h1 id="pageTitle">لوحة التحكم</h1>
+                    <p id="todayDate"></p>
+                </div>
+                <div class="actions">
+                    <button class="btn hide-mobile" onclick="refreshData()">↻ تحديث</button>
+                    <button class="btn btn-primary hide-mobile" id="actionBtn" onclick="handleActionBtn()">＋ طلب جديد</button>
+                    <button class="icon-btn" onclick="notify()">🔔<span class="dot"></span></button>
+                    <button class="icon-btn" onclick="toggleTheme()">☾</button>
+                </div>
+            </header>
+            <div id="pageContent"></div>
+        </main>
+    </div>
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
-  authDomain: "medora-4d7ae.firebaseapp.com",
-  projectId: "medora-4d7ae",
-  storageBucket: "medora-4d7ae.firebasestorage.app",
-  messagingSenderId: "454112159901",
-  appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
-  measurementId: "G-KKPM4D930B"
-};
+    <!-- ============ MODAL ============ -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" id="modalBox">
+            <span class="close-modal" onclick="closeModal()">✕</span>
+            <h3 id="modalTitle">عنوان</h3>
+            <div id="modalBody"></div>
+        </div>
+    </div>
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+    <script>
+        // ============================================================
+        // FIREBASE CONFIG
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
+            authDomain: "medora-4d7ae.firebaseapp.com",
+            projectId: "medora-4d7ae",
+            storageBucket: "medora-4d7ae.firebasestorage.app",
+            messagingSenderId: "454112159901",
+            appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
+            measurementId: "G-KKPM4D930B"
+        };
 
-const $=id=>document.getElementById(id);
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2300)}
-function notify(){toast('لديك 3 إشعارات جديدة')}
-function refreshData(){toast('تم تحديث بيانات لوحة التحكم');}
-function newOrder(){toast('سيتم فتح نموذج إضافة طلب جديد')}
-function viewOrder(id){toast('فتح تفاصيل الطلب '+id)}
-function toggleSidebar(){$('sidebar').classList.toggle('open')}
-function toggleTheme(){
- const dark=document.body.dataset.dark==='1';
- document.body.dataset.dark=dark?'0':'1';
- if(!dark){
-   document.documentElement.style.setProperty('--bg','#0d1020');document.documentElement.style.setProperty('--card','#171b2d');
-   document.documentElement.style.setProperty('--text','#eef0f7');document.documentElement.style.setProperty('--muted','#9299b3');document.documentElement.style.setProperty('--line','#292e43');
- }else location.reload();
-}
-function filterTable(){
- const q=$('search').value.toLowerCase();let visible=0;
- document.querySelectorAll('#ordersTable tbody tr').forEach(r=>{const ok=r.innerText.toLowerCase().includes(q);r.style.display=ok?'':'none';if(ok)visible++});
- $('empty').style.display=visible?'none':'block';
-}
-function exportCSV(){
- const rows=[...document.querySelectorAll('#ordersTable tr')].filter(r=>getComputedStyle(r).display!=='none');
- const csv=rows.map(r=>[...r.cells].map(c=>`"${c.innerText.replaceAll('"','""')}"`).join(',')).join('\\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='orders.csv';a.click();toast('تم تصدير الطلبات');
-}
-function changeRange(){toast('تم تغيير نطاق التقرير إلى '+$('range').value)}
-$('today').textContent=new Intl.DateTimeFormat('ar-EG',{dateStyle:'full'}).format(new Date());
+        // ============================================================
+        // INIT FIREBASE
+        // ============================================================
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-new Chart($('salesChart'),{
- type:'line',
- data:{labels:['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'],
- datasets:[
- {label:'المبيعات',data:[32000,41000,36000,52000,47000,61000,56500],borderWidth:3,tension:.4,fill:false},
- {label:'الطلبات',data:[120,145,132,178,165,205,192],borderWidth:2,tension:.4,fill:false}
- ]},
- options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
- plugins:{legend:{position:'bottom',labels:{usePointStyle:true,font:{family:'Tahoma'}}}},
- scales:{y:{grid:{color:'#edf0f5'},ticks:{font:{family:'Tahoma'}}},x:{grid:{display:false},ticks:{font:{family:'Tahoma'}}}}}
-});
-</script>
+        // ============================================================
+        // GLOBALS
+        // ============================================================
+        let currentUser = null;
+        let currentUserRole = 'marketer';
+        let allMarketers = [];
+        let allProducts = [];
+        let allOrders = [];
+        let allSettings = { shippingCost: 30, regions: { 'بحري': ['الإسكندرية', 'دمياط', 'بورسعيد'], 'قبلي': ['أسيوط', 'سوهاج',
+                    'قنا'
+                ], 'داخلي': ['القاهرة', 'الجيزة', 'القليوبية'] } };
+        let unsubscribeOrders = null;
+        let unsubscribeMarketers = null;
+        let unsubscribeProducts = null;
+        let currentTab = 'dashboard';
+
+        // ============================================================
+        // DOM HELPERS
+        // ============================================================
+        const $ = (id) => document.getElementById(id);
+        const $$ = (sel) => document.querySelectorAll(sel);
+
+        function toast(msg, type = 'info') {
+            const t = $('toast');
+            t.textContent = msg;
+            t.style.background = type === 'danger' ? '#c0392b' : '#151a2d';
+            t.classList.add('show');
+            clearTimeout(t._hide);
+            t._hide = setTimeout(() => t.classList.remove('show'), 2800);
+        }
+
+        function closeModal() {
+            $('modalOverlay').classList.remove('open');
+        }
+
+        function openModal(title, html) {
+            $('modalTitle').textContent = title;
+            $('modalBody').innerHTML = html;
+            $('modalOverlay').classList.add('open');
+        }
+
+        function toggleSidebar() {
+            $('sidebar').classList.toggle('open');
+        }
+
+        function toggleTheme() {
+            const dark = document.body.dataset.dark === '1';
+            document.body.dataset.dark = dark ? '0' : '1';
+            if (!dark) {
+                document.documentElement.style.setProperty('--bg', '#0d1020');
+                document.documentElement.style.setProperty('--card', '#171b2d');
+                document.documentElement.style.setProperty('--text', '#eef0f7');
+                document.documentElement.style.setProperty('--muted', '#9299b3');
+                document.documentElement.style.setProperty('--line', '#292e43');
+                const lb = document.querySelector('.login-box');
+                if (lb) lb.style.background = '#171b2d';
+            } else {
+                location.reload();
+            }
+        }
+
+        function notify() { toast('🔔 لديك 3 إشعارات جديدة'); }
+
+        function refreshData() {
+            toast('🔄 تم تحديث البيانات');
+            loadAllData();
+        }
+
+        function handleActionBtn() {
+            if (currentTab === 'marketers' && currentUserRole === 'admin') {
+                showAddMarketer();
+            } else if (currentTab === 'products' && currentUserRole === 'admin') {
+                showAddProduct();
+            } else {
+                showAddOrder();
+            }
+        }
+
+        // ============================================================
+        // LOGIN / LOGOUT
+        // ============================================================
+        window.handleLogin = async function(e) {
+            e.preventDefault();
+            const email = $('loginEmail').value.trim();
+            const pass = $('loginPassword').value.trim();
+            const errEl = $('loginError');
+            errEl.style.display = 'none';
+            try {
+                await auth.signInWithEmailAndPassword(email, pass);
+                toast('✅ مرحباً بك');
+            } catch (err) {
+                errEl.textContent = err.message || 'خطأ في تسجيل الدخول';
+                errEl.style.display = 'block';
+            }
+            return false;
+        };
+
+        window.logout = async function() {
+            await auth.signOut();
+            toast('🚪 تم تسجيل الخروج');
+            $('app').style.display = 'none';
+            $('loginPage').style.display = 'flex';
+            if (unsubscribeOrders) { unsubscribeOrders();
+                unsubscribeOrders = null; }
+            if (unsubscribeMarketers) { unsubscribeMarketers();
+                unsubscribeMarketers = null; }
+            if (unsubscribeProducts) { unsubscribeProducts();
+                unsubscribeProducts = null; }
+        };
+
+        // ============================================================
+        // AUTH STATE
+        // ============================================================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        currentUserRole = userDoc.data().role || 'marketer';
+                    } else {
+                        currentUserRole = 'marketer';
+                        await db.collection('users').doc(user.uid).set({
+                            email: user.email,
+                            role: 'marketer',
+                            name: user.displayName || 'مسوق',
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                } catch (e) {
+                    console.warn('User role error:', e);
+                    currentUserRole = 'marketer';
+                }
+
+                $('loginPage').style.display = 'none';
+                $('app').style.display = 'block';
+                const roleNames = { admin: 'مدير النظام', moderator: 'مشرف', marketer: 'مسوق' };
+                $('userRoleDisplay').textContent = roleNames[currentUserRole] || 'مسوق';
+                $('todayDate').textContent = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
+                initApp();
+            } else {
+                $('app').style.display = 'none';
+                $('loginPage').style.display = 'flex';
+                if (unsubscribeOrders) { unsubscribeOrders();
+                    unsubscribeOrders = null; }
+                if (unsubscribeMarketers) { unsubscribeMarketers();
+                    unsubscribeMarketers = null; }
+                if (unsubscribeProducts) { unsubscribeProducts();
+                    unsubscribeProducts = null; }
+            }
+        });
+
+        // ============================================================
+        // INIT APP
+        // ============================================================
+        function initApp() {
+            buildNav();
+            loadAllData();
+
+            if (unsubscribeOrders) unsubscribeOrders();
+            if (unsubscribeMarketers) unsubscribeMarketers();
+            if (unsubscribeProducts) unsubscribeProducts();
+
+            unsubscribeOrders = db.collection('orders')
+                .onSnapshot((snap) => {
+                    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderCurrentPage();
+                }, (err) => console.warn('Orders error:', err));
+
+            unsubscribeMarketers = db.collection('marketers')
+                .onSnapshot((snap) => {
+                    allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderCurrentPage();
+                }, (err) => console.warn('Marketers error:', err));
+
+            unsubscribeProducts = db.collection('products')
+                .onSnapshot((snap) => {
+                    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderCurrentPage();
+                }, (err) => console.warn('Products error:', err));
+        }
+
+        // ============================================================
+        // NAVIGATION
+        // ============================================================
+        function buildNav() {
+            const nav = $('mainNav');
+            let links = [];
+            if (currentUserRole === 'admin') {
+                links = [
+                    { id: 'dashboard', label: '📊 لوحة التحكم' },
+                    { id: 'marketers', label: '👥 المسوقين' },
+                    { id: 'products', label: '📦 المنتجات' },
+                    { id: 'orders', label: '📋 الطلبات' },
+                    { id: 'settings', label: '⚙️ الإعدادات' },
+                ];
+            } else if (currentUserRole === 'moderator') {
+                links = [
+                    { id: 'dashboard', label: '📊 لوحة التحكم' },
+                    { id: 'orders', label: '📋 الطلبات' },
+                    { id: 'marketers', label: '👥 المسوقين' },
+                ];
+            } else {
+                links = [
+                    { id: 'dashboard', label: '📊 لوحتي' },
+                    { id: 'orders', label: '📋 طلباتي' },
+                    { id: 'newOrder', label: '➕ إضافة طلب' },
+                ];
+            }
+            nav.innerHTML = links.map(l =>
+                `<a href="#" class="${l.id === currentTab ? 'active' : ''}" data-tab="${l.id}">${l.label}</a>`
+            ).join('');
+            nav.querySelectorAll('a').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentTab = a.dataset.tab;
+                    nav.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+                    a.classList.add('active');
+                    renderCurrentPage();
+                });
+            });
+
+            const titles = {
+                dashboard: 'لوحة التحكم',
+                marketers: 'إدارة المسوقين',
+                products: 'إدارة المنتجات',
+                orders: 'إدارة الطلبات',
+                settings: 'إعدادات النظام',
+                newOrder: 'إضافة طلب جديد'
+            };
+            $('pageTitle').textContent = titles[currentTab] || 'لوحة التحكم';
+
+            const actionBtn = $('actionBtn');
+            if (currentTab === 'newOrder' || currentTab === 'orders') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '＋ طلب جديد';
+            } else if (currentTab === 'marketers' && currentUserRole === 'admin') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '＋ مسوق جديد';
+            } else if (currentTab === 'products' && currentUserRole === 'admin') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '＋ منتج جديد';
+            } else {
+                actionBtn.style.display = 'none';
+            }
+        }
+
+        // ============================================================
+        // RENDER
+        // ============================================================
+        function renderCurrentPage() {
+            const content = $('pageContent');
+            switch (currentTab) {
+                case 'dashboard':
+                    content.innerHTML = renderDashboard();
+                    break;
+                case 'marketers':
+                    content.innerHTML = renderMarketers();
+                    break;
+                case 'products':
+                    content.innerHTML = renderProducts();
+                    break;
+                case 'orders':
+                    content.innerHTML = renderOrders();
+                    break;
+                case 'settings':
+                    content.innerHTML = renderSettings();
+                    break;
+                case 'newOrder':
+                    content.innerHTML = renderNewOrder();
+                    break;
+                default:
+                    content.innerHTML = renderDashboard();
+            }
+            bindEvents();
+        }
+
+        // ============================================================
+        // DASHBOARD
+        // ============================================================
+        function renderDashboard() {
+            const totalOrders = allOrders.length;
+            const totalSales = allOrders.reduce((s, o) => s + (o.total || 0), 0);
+            const delivered = allOrders.filter(o => o.status === 'تم التسليم').length;
+            const canceled = allOrders.filter(o => o.status === 'ملغي').length;
+
+            const marketerStats = {};
+            allOrders.forEach(o => {
+                const m = o.marketerId || 'unknown';
+                if (!marketerStats[m]) marketerStats[m] = { count: 0, sales: 0, profit: 0 };
+                marketerStats[m].count++;
+                marketerStats[m].sales += (o.total || 0);
+                marketerStats[m].profit += (o.profit || 0);
+            });
+
+            const statusCounts = {};
+            allOrders.forEach(o => {
+                const s = o.status || 'جديد';
+                statusCounts[s] = (statusCounts[s] || 0) + 1;
+            });
+            const statusColors = {
+                'جديد': 'var(--primary)',
+                'قيد التجهيز': 'var(--success)',
+                'قيد الشحن': 'var(--warning)',
+                'تم التسليم': 'var(--info)',
+                'ملغي': 'var(--danger)',
+                'مرتجع': '#9b59b6'
+            };
+
+            let statusRows = Object.entries(statusCounts).map(([label, count]) => {
+                const pct = totalOrders ? Math.round((count / totalOrders) * 100) : 0;
+                const color = statusColors[label] || 'var(--primary)';
+                return `<div class="status-row"><span>${label}</span><div class="bar"><span style="width:${pct}%;background:${color}"></span></div><b>${count}</b></div>`;
+            }).join('');
+
+            return `
+            <div class="cards">
+              <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">📋</span></div><h2>${totalOrders}</h2><span class="change up">▲ ${totalOrders?12:0}% <span class="muted">مقارنة بالسابق</span></span></div>
+              <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">💰</span></div><h2>${totalSales.toLocaleString()} ج</h2><span class="change up">▲ ${totalSales?8:0}% <span class="muted">مقارنة بالسابق</span></span></div>
+              <div class="card stat"><div class="stat-head"><span>تم التسليم</span><span class="stat-icon">✅</span></div><h2>${delivered}</h2><span class="change up">▲ ${delivered?6:0}% <span class="muted">معدل النجاح</span></span></div>
+              <div class="card stat"><div class="stat-head"><span>ملغي</span><span class="stat-icon">❌</span></div><h2>${canceled}</h2><span class="change down">▼ ${canceled?2:0}% <span class="muted">عن السابق</span></span></div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card panel">
+                <div class="panel-head"><div><h3>📈 المبيعات والطلبات</h3><span class="muted">آخر 7 أيام</span></div></div>
+                <div class="chart-wrap"><canvas id="dashChart"></canvas></div>
+              </div>
+              <div class="card panel">
+                <div class="panel-head"><div><h3>📊 حالات الطلبات</h3><span class="muted">التوزيع الحالي</span></div></div>
+                <div class="status-list">${statusRows || '<div class="text-muted">لا توجد طلبات</div>'}</div>
+              </div>
+            </div>
+
+            <div class="card panel">
+              <div class="panel-head"><div><h3>🏆 أداء المسوقين</h3><span class="muted">حسب عدد الطلبات</span></div></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>المسوق</th><th>عدد الطلبات</th><th>إجمالي المبيعات</th><th>الأرباح</th></tr></thead>
+                  <tbody>
+                    ${Object.entries(marketerStats).map(([id, st]) => {
+                      const m = allMarketers.find(x=>x.id===id);
+                      return `<tr><td>${m?.name||'غير معروف'}</td><td>${st.count}</td><td>${st.sales.toLocaleString()} ج</td><td>${st.profit.toLocaleString()} ج</td></tr>`;
+                    }).join('') || '<tr><td colspan="4" class="text-muted">لا توجد بيانات</td></tr>'}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        // ============================================================
+        // MARKETERS
+        // ============================================================
+        function renderMarketers() {
+            if (currentUserRole !== 'admin' && currentUserRole !== 'moderator') {
+                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
+            }
+            let rows = allMarketers.map(m => `
+            <tr>
+              <td><div class="customer"><span class="avatar">${m.name?.[0]||'م'}</span>${m.name||'غير معروف'}</div></td>
+              <td>${m.email||'—'}</td>
+              <td>${m.phone||'—'}</td>
+              <td>${m.region||'—'}</td>
+              <td>${m.profitRate || 0}%</td>
+              <td>${(m.totalProfit||0).toLocaleString()} ج</td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="editMarketer('${m.id}')">✎</button>
+                ${currentUserRole==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteMarketer('${m.id}')">✕</button>`:''}
+              </td>
+            </tr>
+          `).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>👥 قائمة المسوقين</h3><span class="muted">إدارة حسابات المسوقين ونسب الأرباح</span></div>
+                ${currentUserRole==='admin'?`<button class="btn btn-primary btn-sm" onclick="showAddMarketer()">＋ إضافة</button>`:''}
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المحافظة</th><th>نسبة الربح</th><th>إجمالي الأرباح</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="7" class="text-muted">لا يوجد مسوقين</td></tr>'}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        // ============================================================
+        // PRODUCTS
+        // ============================================================
+        function renderProducts() {
+            if (currentUserRole !== 'admin') {
+                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
+            }
+            let rows = allProducts.map(p => `
+            <tr>
+              <td>${p.name||'—'}</td>
+              <td>${p.sku||'—'}</td>
+              <td>${(p.sellPrice||0).toLocaleString()} ج</td>
+              <td>${(p.costPrice||0).toLocaleString()} ج</td>
+              <td>${(p.profit||0).toLocaleString()} ج</td>
+              <td>${p.profitRate||0}%</td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="editProduct('${p.id}')">✎</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteProduct('${p.id}')">✕</button>
+              </td>
+            </tr>
+          `).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>📦 قائمة المنتجات</h3><span class="muted">إدارة المنتجات والتسعير</span></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddProduct()">＋ إضافة</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>المنتج</th><th>SKU</th><th>سعر البيع</th><th>سعر التكلفة</th><th>الربح</th><th>نسبة الربح</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="7" class="text-muted">لا توجد منتجات</td></tr>'}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        // ============================================================
+        // ORDERS
+        // ============================================================
+        function renderOrders() {
+            let filtered = [...allOrders];
+            if (currentUserRole === 'marketer') {
+                filtered = filtered.filter(o => o.marketerId === currentUser.uid);
+            }
+            filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            let rows = filtered.map(o => {
+                const m = allMarketers.find(x => x.id === o.marketerId);
+                return `
+              <tr>
+                <td>#${o.id.slice(0,8)}</td>
+                <td><div class="customer"><span class="avatar">${o.customerName?.[0]||'ع'}</span>${o.customerName||'عميل'}</div></td>
+                <td>${o.items?.length||0} منتج</td>
+                <td>${(o.total||0).toLocaleString()} ج</td>
+                <td>${o.region||'—'}</td>
+                <td>${o.shippingType||'—'}</td>
+                <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
+                <td>${(o.profit||0).toLocaleString()} ج</td>
+                <td><button class="btn btn-sm btn-primary" onclick="viewOrder('${o.id}')">عرض</button></td>
+              </tr>
+            `;
+            }).join('');
+
+            const regionOptions = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}">${r}</option>`).join('');
+            const shippingOptions = ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب'].map(s =>
+                `<option value="${s}">${s}</option>`).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head">
+                <div><h3>📋 قائمة الطلبات</h3><span class="muted">إدارة جميع الطلبات</span></div>
+                <div class="flex gap-1">
+                  <select class="btn btn-sm" id="filterRegion" onchange="filterOrders()"><option value="">كل المحافظات</option>${regionOptions}</select>
+                  <select class="btn btn-sm" id="filterShipping" onchange="filterOrders()"><option value="">كل أنواع الشحن</option>${shippingOptions}</select>
+                  <select class="btn btn-sm" id="filterStatus" onchange="filterOrders()"><option value="">كل الحالات</option>
+                    <option value="جديد">جديد</option><option value="قيد التجهيز">قيد التجهيز</option>
+                    <option value="قيد الشحن">قيد الشحن</option><option value="تم التسليم">تم التسليم</option>
+                    <option value="ملغي">ملغي</option><option value="مرتجع">مرتجع</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm" onclick="showAddOrder()">＋ طلب جديد</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>المحافظة</th><th>نوع الشحن</th><th>الحالة</th><th>الربح</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="9" class="text-muted">لا توجد طلبات</td></tr>'}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        function getBadgeClass(status) {
+            const map = {
+                'جديد': 'badge-info',
+                'قيد التجهيز': 'badge-warning',
+                'قيد الشحن': 'badge-info',
+                'تم التسليم': 'badge-success',
+                'ملغي': 'badge-danger',
+                'مرتجع': 'badge-secondary'
+            };
+            return map[status] || 'badge-secondary';
+        }
+
+        // ============================================================
+        // SETTINGS
+        // ============================================================
+        function renderSettings() {
+            if (currentUserRole !== 'admin') {
+                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
+            }
+            const regions = allSettings.regions || {};
+            const regionHtml = Object.entries(regions).map(([cat, cities]) =>
+                `<div class="flex" style="margin-bottom:6px"><strong>${cat}:</strong> <span style="margin:0 8px">${cities.join('، ')}</span>
+              <button class="btn btn-sm" onclick="editRegion('${cat}')">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteRegion('${cat}')">✕</button></div>`
+            ).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>⚙️ إعدادات النظام</h3><span class="muted">المحافظات، سعر الشحن، والإعدادات العامة</span></div></div>
+              <div class="form-group">
+                <label>سعر الشحن الأساسي (ج)</label>
+                <input type="number" id="shippingCost" value="${allSettings.shippingCost||30}" style="width:200px" />
+                <button class="btn btn-primary btn-sm" onclick="updateShippingCost()">تحديث</button>
+              </div>
+              <hr style="margin:18px 0;border-color:var(--line)" />
+              <div class="panel-head"><div><h4>🏙️ تصنيف المحافظات</h4></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddRegion()">＋ إضافة تصنيف</button>
+              </div>
+              ${regionHtml || '<div class="text-muted">لا توجد تصنيفات</div>'}
+              <hr style="margin:18px 0;border-color:var(--line)" />
+              <div class="panel-head"><div><h4>🚚 أنواع الشحن</h4></div></div>
+              <div class="flex gap-1">
+                <span class="badge badge-info">شركة شحن</span>
+                <span class="badge badge-success">مندوب</span>
+                <span class="badge badge-warning">داخلي - شركة</span>
+                <span class="badge badge-secondary">داخلي - مندوب</span>
+              </div>
+              <div class="text-muted" style="margin-top:8px;font-size:13px">يمكن تعديل أنواع الشحن من Firestore.</div>
+            </div>
+          `;
+        }
+
+        // ============================================================
+        // NEW ORDER FORM
+        // ============================================================
+        function renderNewOrder() {
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>➕ إضافة طلب جديد</h3><span class="muted">أدخل بيانات الطلب</span></div></div>
+              ${getOrderFormHTML()}
+            </div>
+          `;
+        }
+
+        function getOrderFormHTML() {
+            const productOpts = allProducts.map(p =>
+                `<option value="${p.id}" data-price="${p.sellPrice||0}" data-cost="${p.costPrice||0}" data-profit="${p.profit||0}">${p.name} (${p.sellPrice||0} ج)</option>`
+            ).join('');
+
+            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}">${r}</option>`).join('');
+
+            const shippingOpts = ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب'].map(s =>
+                `<option value="${s}">${s}</option>`).join('');
+
+            const marketerOpts = allMarketers.map(m =>
+                `<option value="${m.id}">${m.name||m.email}</option>`).join('');
+
+            return `
+            <form id="orderForm" onsubmit="return submitOrder(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>اسم العميل *</label>
+                  <input type="text" id="orderCustomer" required placeholder="أدخل اسم العميل" />
+                </div>
+                <div class="form-group">
+                  <label>رقم العميل (اختياري)</label>
+                  <input type="text" id="orderPhone" placeholder="رقم الهاتف" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>المنتج *</label>
+                <select id="orderProduct" onchange="updateOrderProduct()">
+                  <option value="">اختر منتج</option>
+                  ${productOpts}
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>الكمية</label>
+                  <input type="number" id="orderQty" value="1" min="1" onchange="updateOrderProduct()" />
+                </div>
+                <div class="form-group">
+                  <label>السعر الإجمالي (ج)</label>
+                  <input type="number" id="orderTotal" step="0.01" readonly />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>المحافظة *</label>
+                  <select id="orderRegion" required>${regionOpts || '<option value="">لا توجد محافظات</option>'}</select>
+                </div>
+                <div class="form-group">
+                  <label>نوع الشحن *</label>
+                  <select id="orderShipping" required>${shippingOpts}</select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>الحالة</label>
+                  <select id="orderStatus">
+                    <option value="جديد">جديد</option>
+                    <option value="قيد التجهيز">قيد التجهيز</option>
+                    <option value="قيد الشحن">قيد الشحن</option>
+                    <option value="تم التسليم">تم التسليم</option>
+                    <option value="ملغي">ملغي</option>
+                    <option value="مرتجع">مرتجع</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>المسوق المسؤول</label>
+                  <select id="orderMarketer">
+                    <option value="${currentUser.uid}">أنا (${currentUser.email})</option>
+                    ${(currentUserRole==='admin'||currentUserRole==='moderator') ? marketerOpts : ''}
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>ملاحظات (اختياري)</label>
+                <textarea id="orderNotes" rows="2" placeholder="ملاحظات إضافية"></textarea>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 حفظ الطلب</button>
+                <button type="reset" class="btn">إلغاء</button>
+              </div>
+            </form>
+          `;
+        }
+
+        // ============================================================
+        // ORDER SUBMIT
+        // ============================================================
+        window.submitOrder = async function(e) {
+            e.preventDefault();
+            const customer = $('orderCustomer')?.value.trim();
+            const phone = $('orderPhone')?.value.trim() || '';
+            const productId = $('orderProduct')?.value;
+            const qty = parseInt($('orderQty')?.value) || 1;
+            const total = parseFloat($('orderTotal')?.value) || 0;
+            const region = $('orderRegion')?.value;
+            const shipping = $('orderShipping')?.value;
+            const status = $('orderStatus')?.value || 'جديد';
+            const marketerId = $('orderMarketer')?.value || currentUser.uid;
+            const notes = $('orderNotes')?.value || '';
+
+            if (!customer || !productId || !region || !shipping) {
+                toast('❌ يرجى ملء جميع الحقول المطلوبة', 'danger');
+                return false;
+            }
+
+            const product = allProducts.find(p => p.id === productId);
+            const profit = product ? (product.profit || 0) * qty : 0;
+
+            const orderData = {
+                customerName: customer,
+                customerPhone: phone,
+                items: [{ productId, qty, price: product?.sellPrice || 0 }],
+                total: total,
+                region: region,
+                shippingType: shipping,
+                status: status,
+                marketerId: marketerId,
+                notes: notes,
+                profit: profit,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('orders').add(orderData);
+                toast('✅ تم إضافة الطلب بنجاح');
+                closeModal();
+                // تحديث أرباح المسوق
+                const mRef = db.collection('marketers').doc(marketerId);
+                await mRef.update({ totalProfit: firebase.firestore.FieldValue.increment(profit) });
+                renderCurrentPage();
+            } catch (err) {
+                toast('❌ خطأ في حفظ الطلب: ' + err.message, 'danger');
+            }
+            return false;
+        };
+
+        window.updateOrderProduct = function() {
+            const sel = $('orderProduct');
+            const qty = parseInt($('orderQty')?.value) || 1;
+            const opt = sel?.options[sel.selectedIndex];
+            if (opt && opt.value) {
+                const price = parseFloat(opt.dataset.price) || 0;
+                const total = price * qty;
+                if ($('orderTotal')) $('orderTotal').value = total.toFixed(2);
+            }
+        };
+
+        // ============================================================
+        // CRUD: Marketers
+        // ============================================================
+        window.showAddMarketer = function() {
+            openModal('إضافة مسوق جديد', `
+            <form id="marketerForm" onsubmit="return saveMarketer(event)">
+              <div class="form-group"><label>الاسم *</label><input type="text" id="mName" required /></div>
+              <div class="form-group"><label>البريد الإلكتروني *</label><input type="email" id="mEmail" required /></div>
+              <div class="form-group"><label>رقم الهاتف</label><input type="text" id="mPhone" /></div>
+              <div class="form-group"><label>المحافظة</label>
+                <select id="mRegion">${Object.keys(allSettings.regions||{}).map(r=>`<option value="${r}">${r}</option>`).join('')}</select>
+              </div>
+              <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="mProfitRate" value="10" min="0" max="100" /></div>
+              <div class="form-group"><label>كلمة المرور المؤقتة</label><input type="password" id="mPassword" value="123456" /></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
+            </form>
+          `);
+        };
+
+        window.saveMarketer = async function(e) {
+            e.preventDefault();
+            const name = $('mName')?.value.trim();
+            const email = $('mEmail')?.value.trim();
+            const phone = $('mPhone')?.value.trim() || '';
+            const region = $('mRegion')?.value || '';
+            const profitRate = parseFloat($('mProfitRate')?.value) || 10;
+            const pass = $('mPassword')?.value || '123456';
+
+            if (!name || !email) { toast('❌ الاسم والبريد مطلوبان', 'danger'); return false; }
+
+            try {
+                const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+                const uid = userCred.user.uid;
+                await db.collection('users').doc(uid).set({
+                    name,
+                    email,
+                    role: 'marketer',
+                    phone,
+                    region,
+                    profitRate,
+                    totalProfit: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                await db.collection('marketers').doc(uid).set({
+                    name,
+                    email,
+                    phone,
+                    region,
+                    profitRate,
+                    totalProfit: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                toast('✅ تم إضافة المسوق بنجاح');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) {
+                toast('❌ ' + err.message, 'danger');
+            }
+            return false;
+        };
+
+        window.editMarketer = function(id) {
+            const m = allMarketers.find(x => x.id === id);
+            if (!m) { toast('❌ المسوق غير موجود', 'danger'); return; }
+            openModal('تعديل بيانات المسوق', `
+            <form id="marketerForm" onsubmit="return updateMarketer('${id}', event)">
+              <div class="form-group"><label>الاسم *</label><input type="text" id="mName" value="${m.name||''}" required /></div>
+              <div class="form-group"><label>البريد</label><input type="email" id="mEmail" value="${m.email||''}" disabled /></div>
+              <div class="form-group"><label>الهاتف</label><input type="text" id="mPhone" value="${m.phone||''}" /></div>
+              <div class="form-group"><label>المحافظة</label>
+                <select id="mRegion">${Object.keys(allSettings.regions||{}).map(r=>`<option value="${r}" ${r===m.region?'selected':''}>${r}</option>`).join('')}</select>
+              </div>
+              <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="mProfitRate" value="${m.profitRate||10}" min="0" max="100" /></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 تحديث</button></div>
+            </form>
+          `);
+        };
+
+        window.updateMarketer = async function(id, e) {
+            e.preventDefault();
+            const name = $('mName')?.value.trim();
+            const phone = $('mPhone')?.value.trim() || '';
+            const region = $('mRegion')?.value || '';
+            const profitRate = parseFloat($('mProfitRate')?.value) || 10;
+            if (!name) { toast('❌ الاسم مطلوب', 'danger'); return false; }
+            try {
+                await db.collection('marketers').doc(id).update({ name, phone, region, profitRate });
+                await db.collection('users').doc(id).update({ name, phone, region, profitRate });
+                toast('✅ تم التحديث');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.deleteMarketer = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المسوق؟')) return;
+            try {
+                await db.collection('marketers').doc(id).delete();
+                await db.collection('users').doc(id).delete();
+                toast('✅ تم الحذف');
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ============================================================
+        // CRUD: Products
+        // ============================================================
+        window.showAddProduct = function() {
+            openModal('إضافة منتج جديد', `
+            <form id="productForm" onsubmit="return saveProduct(event)">
+              <div class="form-group"><label>اسم المنتج *</label><input type="text" id="pName" required /></div>
+              <div class="form-group"><label>SKU</label><input type="text" id="pSku" placeholder="رمز المنتج" /></div>
+              <div class="form-row">
+                <div class="form-group"><label>سعر البيع (ج) *</label><input type="number" id="pSell" step="0.01" required /></div>
+                <div class="form-group"><label>سعر التكلفة (ج) *</label><input type="number" id="pCost" step="0.01" required oninput="calcProductProfit()" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>الربح (ج)</label><input type="number" id="pProfit" step="0.01" readonly /></div>
+                <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="pProfitRate" step="0.01" readonly /></div>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
+            </form>
+          `);
+            setTimeout(() => {
+                const sell = $('pSell');
+                const cost = $('pCost');
+                if (sell) sell.oninput = calcProductProfit;
+                if (cost) cost.oninput = calcProductProfit;
+            }, 100);
+        };
+
+        window.calcProductProfit = function() {
+            const sell = parseFloat($('pSell')?.value) || 0;
+            const cost = parseFloat($('pCost')?.value) || 0;
+            const profit = sell - cost;
+            const rate = sell ? (profit / sell) * 100 : 0;
+            if ($('pProfit')) $('pProfit').value = profit.toFixed(2);
+            if ($('pProfitRate')) $('pProfitRate').value = rate.toFixed(1);
+        };
+
+        window.saveProduct = async function(e) {
+            e.preventDefault();
+            const name = $('pName')?.value.trim();
+            const sku = $('pSku')?.value.trim() || '';
+            const sell = parseFloat($('pSell')?.value) || 0;
+            const cost = parseFloat($('pCost')?.value) || 0;
+            const profit = sell - cost;
+            const profitRate = sell ? (profit / sell) * 100 : 0;
+
+            if (!name || !sell) { toast('❌ الاسم وسعر البيع مطلوبان', 'danger'); return false; }
+            try {
+                await db.collection('products').add({
+                    name,
+                    sku,
+                    sellPrice: sell,
+                    costPrice: cost,
+                    profit,
+                    profitRate,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                toast('✅ تم إضافة المنتج');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.editProduct = function(id) {
+            const p = allProducts.find(x => x.id === id);
+            if (!p) { toast('❌ المنتج غير موجود', 'danger'); return; }
+            openModal('تعديل المنتج', `
+            <form id="productForm" onsubmit="return updateProduct('${id}', event)">
+              <div class="form-group"><label>اسم المنتج *</label><input type="text" id="pName" value="${p.name||''}" required /></div>
+              <div class="form-group"><label>SKU</label><input type="text" id="pSku" value="${p.sku||''}" /></div>
+              <div class="form-row">
+                <div class="form-group"><label>سعر البيع (ج) *</label><input type="number" id="pSell" step="0.01" value="${p.sellPrice||0}" required /></div>
+                <div class="form-group"><label>سعر التكلفة (ج) *</label><input type="number" id="pCost" step="0.01" value="${p.costPrice||0}" required oninput="calcProductProfit()" /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>الربح (ج)</label><input type="number" id="pProfit" step="0.01" value="${p.profit||0}" readonly /></div>
+                <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="pProfitRate" step="0.01" value="${p.profitRate||0}" readonly /></div>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 تحديث</button></div>
+            </form>
+          `);
+            setTimeout(() => {
+                const sell = $('pSell');
+                const cost = $('pCost');
+                if (sell) sell.oninput = calcProductProfit;
+                if (cost) cost.oninput = calcProductProfit;
+                calcProductProfit();
+            }, 100);
+        };
+
+        window.updateProduct = async function(id, e) {
+            e.preventDefault();
+            const name = $('pName')?.value.trim();
+            const sku = $('pSku')?.value.trim() || '';
+            const sell = parseFloat($('pSell')?.value) || 0;
+            const cost = parseFloat($('pCost')?.value) || 0;
+            const profit = sell - cost;
+            const profitRate = sell ? (profit / sell) * 100 : 0;
+            if (!name || !sell) { toast('❌ الاسم وسعر البيع مطلوبان', 'danger'); return false; }
+            try {
+                await db.collection('products').doc(id).update({ name, sku, sellPrice: sell, costPrice: cost, profit,
+                    profitRate });
+                toast('✅ تم التحديث');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.deleteProduct = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+            try {
+                await db.collection('products').doc(id).delete();
+                toast('✅ تم الحذف');
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ============================================================
+        // CRUD: Orders
+        // ============================================================
+        window.showAddOrder = function() {
+            openModal('إضافة طلب جديد', getOrderFormHTML());
+            setTimeout(() => {
+                const sel = $('orderProduct');
+                if (sel) sel.onchange = window.updateOrderProduct;
+                const qty = $('orderQty');
+                if (qty) qty.onchange = window.updateOrderProduct;
+            }, 100);
+        };
+
+        window.viewOrder = function(id) {
+            const o = allOrders.find(x => x.id === id);
+            if (!o) { toast('❌ الطلب غير موجود', 'danger'); return; }
+            const m = allMarketers.find(x => x.id === o.marketerId);
+            const items = o.items?.map(it => {
+                const p = allProducts.find(pr => pr.id === it.productId);
+                return `${p?.name||'منتج'} × ${it.qty||1} = ${((it.price||0)*(it.qty||1)).toLocaleString()} ج`;
+            }).join('<br>') || '—';
+
+            openModal(`تفاصيل الطلب #${id.slice(0,8)}`, `
+            <div style="display:grid;gap:8px;font-size:14px">
+              <div><strong>العميل:</strong> ${o.customerName||'—'}</div>
+              <div><strong>الهاتف:</strong> ${o.customerPhone||'—'}</div>
+              <div><strong>المنتجات:</strong><br>${items}</div>
+              <div><strong>الإجمالي:</strong> ${(o.total||0).toLocaleString()} ج</div>
+              <div><strong>المحافظة:</strong> ${o.region||'—'}</div>
+              <div><strong>نوع الشحن:</strong> ${o.shippingType||'—'}</div>
+              <div><strong>الحالة:</strong> <span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></div>
+              <div><strong>الربح:</strong> ${(o.profit||0).toLocaleString()} ج</div>
+              <div><strong>المسوق:</strong> ${m?.name||'غير معروف'}</div>
+              <div><strong>ملاحظات:</strong> ${o.notes||'لا توجد'}</div>
+              <hr style="border-color:var(--line)" />
+              <div class="flex gap-1">
+                <select id="orderStatusEdit" class="btn btn-sm">
+                  <option value="جديد" ${o.status==='جديد'?'selected':''}>جديد</option>
+                  <option value="قيد التجهيز" ${o.status==='قيد التجهيز'?'selected':''}>قيد التجهيز</option>
+                  <option value="قيد الشحن" ${o.status==='قيد الشحن'?'selected':''}>قيد الشحن</option>
+                  <option value="تم التسليم" ${o.status==='تم التسليم'?'selected':''}>تم التسليم</option>
+                  <option value="ملغي" ${o.status==='ملغي'?'selected':''}>ملغي</option>
+                  <option value="مرتجع" ${o.status==='مرتجع'?'selected':''}>مرتجع</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${id}')">تحديث الحالة</button>
+                ${currentUserRole==='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteOrder('${id}')">حذف</button>`:''}
+              </div>
+            </div>
+          `);
+        };
+
+        window.updateOrderStatus = async function(id) {
+            const status = $('orderStatusEdit')?.value;
+            if (!status) return;
+            try {
+                await db.collection('orders').doc(id).update({
+                    status,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                toast('✅ تم تحديث الحالة');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        window.deleteOrder = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
+            try {
+                await db.collection('orders').doc(id).delete();
+                toast('✅ تم الحذف');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ============================================================
+        // SETTINGS: Regions & Shipping
+        // ============================================================
+        window.updateShippingCost = async function() {
+            const val = parseFloat($('shippingCost')?.value);
+            if (isNaN(val) || val < 0) { toast('❌ قيمة غير صحيحة', 'danger'); return; }
+            try {
+                await db.collection('settings').doc('general').set({ shippingCost: val }, { merge: true });
+                allSettings.shippingCost = val;
+                toast('✅ تم تحديث سعر الشحن');
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        window.showAddRegion = function() {
+            openModal('إضافة تصنيف محافظة جديد', `
+            <form id="regionForm" onsubmit="return saveRegion(event)">
+              <div class="form-group"><label>اسم التصنيف (مثل: بحري، قبلي، داخلي) *</label><input type="text" id="rName" required placeholder="مثال: بحري" /></div>
+              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label>
+                <textarea id="rCities" rows="3" placeholder="الإسكندرية، دمياط، بورسعيد" required></textarea>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
+            </form>
+          `);
+        };
+
+        window.saveRegion = async function(e) {
+            e.preventDefault();
+            const name = $('rName')?.value.trim();
+            const cities = $('rCities')?.value.split(',').map(s => s.trim()).filter(Boolean);
+            if (!name || !cities.length) { toast('❌ الاسم والمدن مطلوبان', 'danger'); return false; }
+            try {
+                const regions = { ...allSettings.regions, [name]: cities };
+                await db.collection('settings').doc('general').set({ regions }, { merge: true });
+                allSettings.regions = regions;
+                toast('✅ تم إضافة التصنيف');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.editRegion = function(cat) {
+            const cities = allSettings.regions?.[cat] || [];
+            openModal(`تعديل تصنيف ${cat}`, `
+            <form id="regionForm" onsubmit="return updateRegion('${cat}', event)">
+              <div class="form-group"><label>اسم التصنيف *</label><input type="text" id="rName" value="${cat}" required /></div>
+              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label>
+                <textarea id="rCities" rows="3" required>${cities.join('، ')}</textarea>
+              </div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 تحديث</button></div>
+            </form>
+          `);
+        };
+
+        window.updateRegion = async function(oldCat, e) {
+            e.preventDefault();
+            const name = $('rName')?.value.trim();
+            const cities = $('rCities')?.value.split(/[,،]/).map(s => s.trim()).filter(Boolean);
+            if (!name || !cities.length) { toast('❌ الاسم والمدن مطلوبان', 'danger'); return false; }
+            try {
+                const regions = { ...allSettings.regions };
+                delete regions[oldCat];
+                regions[name] = cities;
+                await db.collection('settings').doc('general').set({ regions }, { merge: true });
+                allSettings.regions = regions;
+                toast('✅ تم التحديث');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.deleteRegion = async function(cat) {
+            if (!confirm(`هل أنت متأكد من حذف تصنيف "${cat}"؟`)) return;
+            try {
+                const regions = { ...allSettings.regions };
+                delete regions[cat];
+                await db.collection('settings').doc('general').set({ regions }, { merge: true });
+                allSettings.regions = regions;
+                toast('✅ تم الحذف');
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ============================================================
+        // FILTER ORDERS
+        // ============================================================
+        window.filterOrders = function() {
+            renderCurrentPage();
+            const region = $('filterRegion')?.value || '';
+            const shipping = $('filterShipping')?.value || '';
+            const status = $('filterStatus')?.value || '';
+            const rows = document.querySelectorAll('#pageContent table tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 7) return;
+                const regionCell = cells[4]?.textContent || '';
+                const shippingCell = cells[5]?.textContent || '';
+                const statusCell = cells[6]?.textContent || '';
+                let show = true;
+                if (region && regionCell !== region) show = false;
+                if (shipping && shippingCell !== shipping) show = false;
+                if (status && statusCell !== status) show = false;
+                row.style.display = show ? '' : 'none';
+            });
+        };
+
+        // ============================================================
+        // LOAD ALL DATA
+        // ============================================================
+        async function loadAllData() {
+            try {
+                const settingsDoc = await db.collection('settings').doc('general').get();
+                if (settingsDoc.exists) {
+                    allSettings = settingsDoc.data();
+                }
+                const mSnap = await db.collection('marketers').get();
+                allMarketers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const pSnap = await db.collection('products').get();
+                allProducts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const oSnap = await db.collection('orders').get();
+                allOrders = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderCurrentPage();
+            } catch (err) {
+                console.warn('Load data error:', err);
+            }
+        }
+
+        // ============================================================
+        // BIND EVENTS
+        // ============================================================
+        function bindEvents() {
+            const chartCanvas = document.getElementById('dashChart');
+            if (chartCanvas && currentTab === 'dashboard') {
+                if (window._dashChart) { window._dashChart.destroy(); }
+                const ctx = chartCanvas.getContext('2d');
+                window._dashChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'],
+                        datasets: [{
+                            label: 'المبيعات',
+                            data: [32000, 41000, 36000, 52000, 47000, 61000, 56500],
+                            borderColor: '#5b5ce2',
+                            backgroundColor: 'rgba(91,92,226,0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'الطلبات',
+                            data: [120, 145, 132, 178, 165, 205, 192],
+                            borderColor: '#16a56b',
+                            backgroundColor: 'rgba(22,165,107,0.05)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Tahoma' } } }
+                        },
+                        scales: {
+                            y: { grid: { color: '#edf0f5' }, ticks: { font: { family: 'Tahoma' } } },
+                            x: { grid: { display: false }, ticks: { font: { family: 'Tahoma' } } }
+                        }
+                    }
+                });
+            }
+
+            const filterRegion = $('filterRegion');
+            const filterShipping = $('filterShipping');
+            const filterStatus = $('filterStatus');
+            if (filterRegion) filterRegion.onchange = window.filterOrders;
+            if (filterShipping) filterShipping.onchange = window.filterOrders;
+            if (filterStatus) filterStatus.onchange = window.filterOrders;
+
+            const orderForm = $('orderForm');
+            if (orderForm) {
+                orderForm.onsubmit = window.submitOrder;
+            }
+            const prodSel = $('orderProduct');
+            if (prodSel) {
+                prodSel.onchange = window.updateOrderProduct;
+                const qty = $('orderQty');
+                if (qty) qty.onchange = window.updateOrderProduct;
+                window.updateOrderProduct();
+            }
+        }
+
+        // ============================================================
+        // GLOBAL FUNCTIONS
+        // ============================================================
+        window.toggleSidebar = toggleSidebar;
+        window.toggleTheme = toggleTheme;
+        window.notify = notify;
+        window.refreshData = refreshData;
+        window.handleActionBtn = handleActionBtn;
+        window.closeModal = closeModal;
+        window.toast = toast;
+
+        console.log('🚀 MEDORA system ready with Firebase');
+    </script>
 </body>
 </html>
