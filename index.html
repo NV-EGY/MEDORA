@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MEDORA - نظام إدارة الطلبات</title>
+    <title>MEDORA - نظام إدارة الطلبات المتكامل</title>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
     </script>
@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js">
     </script>
     <style>
+        /* ========== RESET & VARIABLES ========== */
         * {
             margin: 0;
             padding: 0;
@@ -56,7 +57,7 @@
             color: inherit;
         }
 
-        /* ---------- Login ---------- */
+        /* ========== LOGIN ========== */
         #loginPage {
             display: flex;
             align-items: center;
@@ -70,12 +71,12 @@
             border-radius: var(--radius);
             padding: 44px 36px;
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         .login-box h2 {
-            font-size: 26px;
-            margin-bottom: 6px;
+            font-size: 28px;
+            margin-bottom: 4px;
             color: #11152a;
         }
         .login-box p {
@@ -136,13 +137,13 @@
             color: var(--primary);
         }
 
-        /* ---------- App Layout ---------- */
+        /* ========== APP LAYOUT ========== */
         #app {
             display: none;
             min-height: 100vh;
         }
         .sidebar {
-            width: 255px;
+            width: 270px;
             background: #11152a;
             color: #fff;
             padding: 20px 14px;
@@ -157,8 +158,13 @@
         .sidebar .brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
             padding: 4px 10px 26px;
+        }
+        .sidebar .brand-inner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .sidebar .logo {
             width: 44px;
@@ -177,6 +183,17 @@
         .sidebar .brand small {
             color: #9298b3;
             font-size: 11px;
+        }
+        .close-sidebar {
+            color: #9298b3;
+            font-size: 22px;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: none;
+        }
+        .close-sidebar:hover {
+            color: #fff;
         }
         .nav-title {
             font-size: 11px;
@@ -217,12 +234,12 @@
         }
 
         .main {
-            margin-right: 255px;
+            margin-right: 270px;
             padding: 22px 28px 40px;
             min-height: 100vh;
         }
 
-        /* ---------- Top Bar ---------- */
+        /* ========== TOPBAR ========== */
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -309,7 +326,7 @@
             display: none;
         }
 
-        /* ---------- Cards ---------- */
+        /* ========== CARDS ========== */
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -360,7 +377,7 @@
             color: var(--danger);
         }
 
-        /* ---------- Grid ---------- */
+        /* ========== GRID ========== */
         .grid-2 {
             display: grid;
             grid-template-columns: 1.6fr 1fr;
@@ -390,7 +407,7 @@
             height: 260px;
         }
 
-        /* ---------- Status List ---------- */
+        /* ========== STATUS LIST ========== */
         .status-list {
             display: grid;
             gap: 12px;
@@ -415,7 +432,7 @@
             background: var(--primary);
         }
 
-        /* ---------- Table ---------- */
+        /* ========== TABLE ========== */
         .table-wrap {
             overflow-x: auto;
         }
@@ -479,7 +496,6 @@
             font-size: 14px;
             flex-shrink: 0;
         }
-
         .empty {
             padding: 30px;
             text-align: center;
@@ -487,7 +503,7 @@
             display: none;
         }
 
-        /* ---------- Forms ---------- */
+        /* ========== FORMS ========== */
         .form-group {
             margin-bottom: 14px;
         }
@@ -528,7 +544,7 @@
             flex-wrap: wrap;
         }
 
-        /* ---------- Modals ---------- */
+        /* ========== MODALS ========== */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -549,7 +565,7 @@
             background: var(--card);
             border-radius: var(--radius);
             padding: 28px 32px;
-            max-width: 560px;
+            max-width: 620px;
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
@@ -581,7 +597,7 @@
             color: var(--danger);
         }
 
-        /* ---------- Toast ---------- */
+        /* ========== TOAST ========== */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -603,7 +619,71 @@
             opacity: 1;
         }
 
-        /* ---------- Responsive ---------- */
+        /* ========== USER CARDS ========== */
+        .user-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .user-card:hover {
+            box-shadow: var(--shadow);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .user-details h4 {
+            margin: 0 0 4px;
+        }
+        .user-details small {
+            color: var(--muted);
+        }
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .role-admin {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .role-moderator {
+            background: #f39c12;
+            color: #fff;
+        }
+        .role-marketer {
+            background: #2ecc71;
+            color: #fff;
+        }
+        .role-customer_service {
+            background: #3498db;
+            color: #fff;
+        }
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* ========== RESPONSIVE ========== */
         @media (max-width: 1000px) {
             .grid-2 {
                 grid-template-columns: 1fr;
@@ -618,6 +698,9 @@
             }
             .sidebar.open {
                 transform: translateX(0);
+            }
+            .close-sidebar {
+                display: block;
             }
             .main {
                 margin-right: 0;
@@ -676,18 +759,24 @@
         .hidden {
             display: none !important;
         }
+        .mt-2 {
+            margin-top: 12px;
+        }
+        .w-full {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <!-- ============ TOAST ============ -->
+    <!-- ========== TOAST ========== -->
     <div class="toast" id="toast"></div>
 
-    <!-- ============ LOGIN PAGE ============ -->
+    <!-- ========== LOGIN ========== -->
     <div id="loginPage">
         <div class="login-box">
             <h2>🔐 MEDORA</h2>
-            <p>نظام إدارة الطلبات – سجل الدخول</p>
+            <p>نظام إدارة الطلبات المتكامل – سجل الدخول</p>
             <form id="loginForm" onsubmit="return handleLogin(event)">
                 <label>البريد الإلكتروني</label>
                 <input type="email" id="loginEmail" placeholder="example@medora.com" required />
@@ -698,22 +787,26 @@
                 <div class="login-role">
                     📌 <strong>مدير:</strong> admin@medora.com / admin123<br>
                     📌 <strong>مشرف:</strong> moderator@medora.com / mod123<br>
-                    📌 <strong>مسوق:</strong> marketer@medora.com / market123
+                    📌 <strong>مسوق:</strong> marketer@medora.com / market123<br>
+                    📌 <strong>خدمة عملاء:</strong> cs@medora.com / cs123
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ============ APP ============ -->
+    <!-- ========== APP ========== -->
     <div id="app">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="brand">
-                <div class="logo">M</div>
-                <div>
-                    <h2>MEDORA</h2>
-                    <small id="userRoleDisplay">مدير النظام</small>
+                <div class="brand-inner">
+                    <div class="logo">M</div>
+                    <div>
+                        <h2>MEDORA</h2>
+                        <small id="userRoleDisplay">مدير النظام</small>
+                    </div>
                 </div>
+                <span class="close-sidebar" id="closeSidebar">✕</span>
             </div>
             <div class="nav-title">الرئيسية</div>
             <nav class="nav" id="mainNav"></nav>
@@ -725,7 +818,7 @@
         </aside>
 
         <!-- Main -->
-        <main class="main">
+        <main class="main" id="mainContent">
             <header class="topbar">
                 <div class="page-title">
                     <button class="btn mobile-menu" onclick="toggleSidebar()">☰</button>
@@ -743,7 +836,7 @@
         </main>
     </div>
 
-    <!-- ============ MODAL ============ -->
+    <!-- ========== MODAL ========== -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-box" id="modalBox">
             <span class="close-modal" onclick="closeModal()">✕</span>
@@ -753,9 +846,9 @@
     </div>
 
     <script>
-        // ============================================================
+        // ================================================================
         // FIREBASE CONFIG
-        // ============================================================
+        // ================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
             authDomain: "medora-4d7ae.firebaseapp.com",
@@ -766,32 +859,38 @@
             measurementId: "G-KKPM4D930B"
         };
 
-        // ============================================================
-        // INIT FIREBASE
-        // ============================================================
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // ============================================================
+        // ================================================================
         // GLOBALS
-        // ============================================================
+        // ================================================================
         let currentUser = null;
         let currentUserRole = 'marketer';
+        let currentUserData = null;
+        let allUsers = [];
         let allMarketers = [];
         let allProducts = [];
         let allOrders = [];
-        let allSettings = { shippingCost: 30, regions: { 'بحري': ['الإسكندرية', 'دمياط', 'بورسعيد'], 'قبلي': ['أسيوط', 'سوهاج',
-                    'قنا'
-                ], 'داخلي': ['القاهرة', 'الجيزة', 'القليوبية'] } };
-        let unsubscribeOrders = null;
-        let unsubscribeMarketers = null;
-        let unsubscribeProducts = null;
+        let allSettings = {
+            shippingCost: 30,
+            regions: { 'بحري': ['الإسكندرية', 'دمياط', 'بورسعيد'], 'قبلي': ['أسيوط', 'سوهاج', 'قنا'],
+                'داخلي': ['القاهرة', 'الجيزة', 'القليوبية'] },
+            shippingTypes: ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب']
+        };
         let currentTab = 'dashboard';
 
-        // ============================================================
+        // Unsubscribers
+        let unsubOrders = null,
+            unsubMarketers = null,
+            unsubProducts = null,
+            unsubUsers = null,
+            unsubSettings = null;
+
+        // ================================================================
         // DOM HELPERS
-        // ============================================================
+        // ================================================================
         const $ = (id) => document.getElementById(id);
         const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -804,9 +903,7 @@
             t._hide = setTimeout(() => t.classList.remove('show'), 2800);
         }
 
-        function closeModal() {
-            $('modalOverlay').classList.remove('open');
-        }
+        function closeModal() { $('modalOverlay').classList.remove('open'); }
 
         function openModal(title, html) {
             $('modalTitle').textContent = title;
@@ -818,19 +915,31 @@
             $('sidebar').classList.toggle('open');
         }
 
+        function closeSidebar() {
+            $('sidebar').classList.remove('open');
+        }
+
+        let darkMode = false;
+
         function toggleTheme() {
-            const dark = document.body.dataset.dark === '1';
-            document.body.dataset.dark = dark ? '0' : '1';
-            if (!dark) {
-                document.documentElement.style.setProperty('--bg', '#0d1020');
-                document.documentElement.style.setProperty('--card', '#171b2d');
-                document.documentElement.style.setProperty('--text', '#eef0f7');
-                document.documentElement.style.setProperty('--muted', '#9299b3');
-                document.documentElement.style.setProperty('--line', '#292e43');
+            darkMode = !darkMode;
+            const root = document.documentElement;
+            if (darkMode) {
+                root.style.setProperty('--bg', '#0d1020');
+                root.style.setProperty('--card', '#171b2d');
+                root.style.setProperty('--text', '#eef0f7');
+                root.style.setProperty('--muted', '#9299b3');
+                root.style.setProperty('--line', '#292e43');
                 const lb = document.querySelector('.login-box');
                 if (lb) lb.style.background = '#171b2d';
             } else {
-                location.reload();
+                root.style.setProperty('--bg', '#f5f7fb');
+                root.style.setProperty('--card', '#ffffff');
+                root.style.setProperty('--text', '#172033');
+                root.style.setProperty('--muted', '#7a8499');
+                root.style.setProperty('--line', '#e8ebf2');
+                const lb = document.querySelector('.login-box');
+                if (lb) lb.style.background = '#ffffff';
             }
         }
 
@@ -842,18 +951,17 @@
         }
 
         function handleActionBtn() {
-            if (currentTab === 'marketers' && currentUserRole === 'admin') {
-                showAddMarketer();
-            } else if (currentTab === 'products' && currentUserRole === 'admin') {
-                showAddProduct();
-            } else {
-                showAddOrder();
-            }
+            if (currentTab === 'users' && currentUserRole === 'admin') showAddUser();
+            else if (currentTab === 'marketers' && (currentUserRole === 'admin' || currentUserRole === 'moderator'))
+            showAddMarketer();
+            else if (currentTab === 'products' && currentUserRole === 'admin') showAddProduct();
+            else if (currentTab === 'settings' && currentUserRole === 'admin') showSettingsEditor();
+            else showAddOrder();
         }
 
-        // ============================================================
+        // ================================================================
         // LOGIN / LOGOUT
-        // ============================================================
+        // ================================================================
         window.handleLogin = async function(e) {
             e.preventDefault();
             const email = $('loginEmail').value.trim();
@@ -875,96 +983,160 @@
             toast('🚪 تم تسجيل الخروج');
             $('app').style.display = 'none';
             $('loginPage').style.display = 'flex';
-            if (unsubscribeOrders) { unsubscribeOrders();
-                unsubscribeOrders = null; }
-            if (unsubscribeMarketers) { unsubscribeMarketers();
-                unsubscribeMarketers = null; }
-            if (unsubscribeProducts) { unsubscribeProducts();
-                unsubscribeProducts = null; }
+            if (unsubOrders) { unsubOrders();
+                unsubOrders = null; }
+            if (unsubMarketers) { unsubMarketers();
+                unsubMarketers = null; }
+            if (unsubProducts) { unsubProducts();
+                unsubProducts = null; }
+            if (unsubUsers) { unsubUsers();
+                unsubUsers = null; }
+            if (unsubSettings) { unsubSettings();
+                unsubSettings = null; }
         };
 
-        // ============================================================
+        // ================================================================
         // AUTH STATE
-        // ============================================================
+        // ================================================================
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 currentUser = user;
                 try {
                     const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
-                        currentUserRole = userDoc.data().role || 'marketer';
+                        currentUserData = userDoc.data();
+                        currentUserRole = currentUserData.role || 'marketer';
                     } else {
                         currentUserRole = 'marketer';
+                        currentUserData = { email: user.email, role: 'marketer', name: 'مسوق' };
                         await db.collection('users').doc(user.uid).set({
                             email: user.email,
                             role: 'marketer',
-                            name: user.displayName || 'مسوق',
+                            name: 'مسوق',
                             createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }
                 } catch (e) {
                     console.warn('User role error:', e);
                     currentUserRole = 'marketer';
+                    currentUserData = { email: user.email, role: 'marketer', name: 'مسوق' };
                 }
 
                 $('loginPage').style.display = 'none';
                 $('app').style.display = 'block';
-                const roleNames = { admin: 'مدير النظام', moderator: 'مشرف', marketer: 'مسوق' };
+                const roleNames = { admin: 'مدير النظام', moderator: 'مشرف', marketer: 'مسوق',
+                customer_service: 'خدمة عملاء' };
                 $('userRoleDisplay').textContent = roleNames[currentUserRole] || 'مسوق';
                 $('todayDate').textContent = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
                 initApp();
             } else {
                 $('app').style.display = 'none';
                 $('loginPage').style.display = 'flex';
-                if (unsubscribeOrders) { unsubscribeOrders();
-                    unsubscribeOrders = null; }
-                if (unsubscribeMarketers) { unsubscribeMarketers();
-                    unsubscribeMarketers = null; }
-                if (unsubscribeProducts) { unsubscribeProducts();
-                    unsubscribeProducts = null; }
+                if (unsubOrders) { unsubOrders();
+                    unsubOrders = null; }
+                if (unsubMarketers) { unsubMarketers();
+                    unsubMarketers = null; }
+                if (unsubProducts) { unsubProducts();
+                    unsubProducts = null; }
+                if (unsubUsers) { unsubUsers();
+                    unsubUsers = null; }
+                if (unsubSettings) { unsubSettings();
+                    unsubSettings = null; }
             }
         });
 
-        // ============================================================
+        // ================================================================
         // INIT APP
-        // ============================================================
+        // ================================================================
         function initApp() {
             buildNav();
             loadAllData();
 
-            if (unsubscribeOrders) unsubscribeOrders();
-            if (unsubscribeMarketers) unsubscribeMarketers();
-            if (unsubscribeProducts) unsubscribeProducts();
+            if (unsubOrders) unsubOrders();
+            if (unsubMarketers) unsubMarketers();
+            if (unsubProducts) unsubProducts();
+            if (unsubUsers) unsubUsers();
+            if (unsubSettings) unsubSettings();
 
-            unsubscribeOrders = db.collection('orders')
-                .onSnapshot((snap) => {
-                    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    renderCurrentPage();
-                }, (err) => console.warn('Orders error:', err));
+            unsubOrders = db.collection('orders').onSnapshot(snap => {
+                allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderCurrentPage();
+            }, err => console.warn('Orders error:', err));
 
-            unsubscribeMarketers = db.collection('marketers')
-                .onSnapshot((snap) => {
-                    allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    renderCurrentPage();
-                }, (err) => console.warn('Marketers error:', err));
+            unsubMarketers = db.collection('marketers').onSnapshot(snap => {
+                allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderCurrentPage();
+            }, err => console.warn('Marketers error:', err));
 
-            unsubscribeProducts = db.collection('products')
-                .onSnapshot((snap) => {
-                    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    renderCurrentPage();
-                }, (err) => console.warn('Products error:', err));
+            unsubProducts = db.collection('products').onSnapshot(snap => {
+                allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderCurrentPage();
+            }, err => console.warn('Products error:', err));
+
+            unsubUsers = db.collection('users').onSnapshot(snap => {
+                allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderCurrentPage();
+            }, err => console.warn('Users error:', err));
+
+            unsubSettings = db.collection('settings').doc('general').onSnapshot(doc => {
+                if (doc.exists) allSettings = doc.data();
+                renderCurrentPage();
+            }, err => console.warn('Settings error:', err));
+
+            // ========== SIDEBAR CLOSE BEHAVIOR ==========
+            setupSidebarClose();
         }
 
-        // ============================================================
+        // ================================================================
+        // SIDEBAR CLOSE LOGIC
+        // ================================================================
+        function setupSidebarClose() {
+            const sidebar = $('sidebar');
+            const closeBtn = $('closeSidebar');
+            const mainContent = $('mainContent');
+            const mobileMenuBtn = document.querySelector('.mobile-menu');
+
+            // Close button
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sidebar.classList.remove('open');
+                });
+            }
+
+            // Close when clicking a nav link (inside sidebar)
+            document.querySelectorAll('#mainNav a').forEach(link => {
+                link.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                });
+            });
+
+            // Close when clicking outside sidebar (on main content) and not on mobile menu button
+            document.addEventListener('click', (e) => {
+                const isSidebar = sidebar.contains(e.target);
+                const isMobileMenu = mobileMenuBtn && mobileMenuBtn.contains(e.target);
+                if (!isSidebar && !isMobileMenu && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                }
+            });
+
+            // Prevent closing when clicking inside sidebar
+            sidebar.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // ================================================================
         // NAVIGATION
-        // ============================================================
+        // ================================================================
         function buildNav() {
             const nav = $('mainNav');
             let links = [];
             if (currentUserRole === 'admin') {
                 links = [
                     { id: 'dashboard', label: '📊 لوحة التحكم' },
-                    { id: 'marketers', label: '👥 المسوقين' },
+                    { id: 'users', label: '👥 إدارة الحسابات' },
+                    { id: 'marketers', label: '👤 المسوقين' },
                     { id: 'products', label: '📦 المنتجات' },
                     { id: 'orders', label: '📋 الطلبات' },
                     { id: 'settings', label: '⚙️ الإعدادات' },
@@ -972,10 +1144,15 @@
             } else if (currentUserRole === 'moderator') {
                 links = [
                     { id: 'dashboard', label: '📊 لوحة التحكم' },
-                    { id: 'orders', label: '📋 الطلبات' },
-                    { id: 'marketers', label: '👥 المسوقين' },
+                    { id: 'orders', label: '📋 طلبات المسوقين' },
+                    { id: 'marketers', label: '👤 المسوقين التابعين' },
                 ];
-            } else {
+            } else if (currentUserRole === 'customer_service') {
+                links = [
+                    { id: 'dashboard', label: '📊 لوحة التحكم' },
+                    { id: 'orders', label: '📋 جميع الطلبات' },
+                ];
+            } else { // marketer
                 links = [
                     { id: 'dashboard', label: '📊 لوحتي' },
                     { id: 'orders', label: '📋 طلباتي' },
@@ -997,6 +1174,7 @@
 
             const titles = {
                 dashboard: 'لوحة التحكم',
+                users: 'إدارة الحسابات',
                 marketers: 'إدارة المسوقين',
                 products: 'إدارة المنتجات',
                 orders: 'إدارة الطلبات',
@@ -1009,25 +1187,34 @@
             if (currentTab === 'newOrder' || currentTab === 'orders') {
                 actionBtn.style.display = 'inline-flex';
                 actionBtn.textContent = '＋ طلب جديد';
-            } else if (currentTab === 'marketers' && currentUserRole === 'admin') {
+            } else if (currentTab === 'users' && currentUserRole === 'admin') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '＋ حساب جديد';
+            } else if (currentTab === 'marketers' && (currentUserRole === 'admin' || currentUserRole === 'moderator')) {
                 actionBtn.style.display = 'inline-flex';
                 actionBtn.textContent = '＋ مسوق جديد';
             } else if (currentTab === 'products' && currentUserRole === 'admin') {
                 actionBtn.style.display = 'inline-flex';
                 actionBtn.textContent = '＋ منتج جديد';
+            } else if (currentTab === 'settings' && currentUserRole === 'admin') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '⚙️ تعديل الإعدادات';
             } else {
                 actionBtn.style.display = 'none';
             }
         }
 
-        // ============================================================
+        // ================================================================
         // RENDER
-        // ============================================================
+        // ================================================================
         function renderCurrentPage() {
             const content = $('pageContent');
             switch (currentTab) {
                 case 'dashboard':
                     content.innerHTML = renderDashboard();
+                    break;
+                case 'users':
+                    content.innerHTML = renderUsers();
                     break;
                 case 'marketers':
                     content.innerHTML = renderMarketers();
@@ -1050,26 +1237,28 @@
             bindEvents();
         }
 
-        // ============================================================
+        // ================================================================
         // DASHBOARD
-        // ============================================================
+        // ================================================================
         function renderDashboard() {
-            const totalOrders = allOrders.length;
-            const totalSales = allOrders.reduce((s, o) => s + (o.total || 0), 0);
-            const delivered = allOrders.filter(o => o.status === 'تم التسليم').length;
-            const canceled = allOrders.filter(o => o.status === 'ملغي').length;
+            // Filter orders based on role
+            let filteredOrders = [...allOrders];
+            if (currentUserRole === 'marketer') {
+                filteredOrders = filteredOrders.filter(o => o.marketerId === currentUser.uid);
+            } else if (currentUserRole === 'moderator') {
+                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid).map(m => m.id);
+                filteredOrders = filteredOrders.filter(o => myMarketers.includes(o.marketerId));
+            }
+            // customer_service sees all
 
-            const marketerStats = {};
-            allOrders.forEach(o => {
-                const m = o.marketerId || 'unknown';
-                if (!marketerStats[m]) marketerStats[m] = { count: 0, sales: 0, profit: 0 };
-                marketerStats[m].count++;
-                marketerStats[m].sales += (o.total || 0);
-                marketerStats[m].profit += (o.profit || 0);
-            });
+            const totalOrders = filteredOrders.length;
+            const totalSales = filteredOrders.reduce((s, o) => s + (o.total || 0), 0);
+            const totalProfit = filteredOrders.reduce((s, o) => s + (o.profit || 0), 0);
+            const delivered = filteredOrders.filter(o => o.status === 'تم التسليم').length;
 
+            // Status distribution
             const statusCounts = {};
-            allOrders.forEach(o => {
+            filteredOrders.forEach(o => {
                 const s = o.status || 'جديد';
                 statusCounts[s] = (statusCounts[s] || 0) + 1;
             });
@@ -1081,19 +1270,35 @@
                 'ملغي': 'var(--danger)',
                 'مرتجع': '#9b59b6'
             };
-
             let statusRows = Object.entries(statusCounts).map(([label, count]) => {
                 const pct = totalOrders ? Math.round((count / totalOrders) * 100) : 0;
                 const color = statusColors[label] || 'var(--primary)';
                 return `<div class="status-row"><span>${label}</span><div class="bar"><span style="width:${pct}%;background:${color}"></span></div><b>${count}</b></div>`;
             }).join('');
 
+            // Top marketers
+            const marketerStats = {};
+            filteredOrders.forEach(o => {
+                const m = o.marketerId || 'unknown';
+                if (!marketerStats[m]) marketerStats[m] = { count: 0, sales: 0, profit: 0 };
+                marketerStats[m].count++;
+                marketerStats[m].sales += (o.total || 0);
+                marketerStats[m].profit += (o.profit || 0);
+            });
+            let topMarketers = Object.entries(marketerStats)
+                .sort((a, b) => b[1].profit - a[1].profit)
+                .slice(0, 5)
+                .map(([id, st]) => {
+                    const m = allMarketers.find(x => x.id === id);
+                    return `<tr><td>${m?.name||'غير معروف'}</td><td>${st.count}</td><td>${st.sales.toLocaleString()} ج</td><td>${st.profit.toLocaleString()} ج</td></tr>`;
+                }).join('');
+
             return `
             <div class="cards">
-              <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">📋</span></div><h2>${totalOrders}</h2><span class="change up">▲ ${totalOrders?12:0}% <span class="muted">مقارنة بالسابق</span></span></div>
-              <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">💰</span></div><h2>${totalSales.toLocaleString()} ج</h2><span class="change up">▲ ${totalSales?8:0}% <span class="muted">مقارنة بالسابق</span></span></div>
-              <div class="card stat"><div class="stat-head"><span>تم التسليم</span><span class="stat-icon">✅</span></div><h2>${delivered}</h2><span class="change up">▲ ${delivered?6:0}% <span class="muted">معدل النجاح</span></span></div>
-              <div class="card stat"><div class="stat-head"><span>ملغي</span><span class="stat-icon">❌</span></div><h2>${canceled}</h2><span class="change down">▼ ${canceled?2:0}% <span class="muted">عن السابق</span></span></div>
+              <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">📋</span></div><h2>${totalOrders}</h2><span class="change up">▲ ${totalOrders?12:0}%</span></div>
+              <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">💰</span></div><h2>${totalSales.toLocaleString()} ج</h2><span class="change up">▲ ${totalSales?8:0}%</span></div>
+              <div class="card stat"><div class="stat-head"><span>إجمالي الأرباح</span><span class="stat-icon">📈</span></div><h2>${totalProfit.toLocaleString()} ج</h2><span class="change up">▲ ${totalProfit?10:0}%</span></div>
+              <div class="card stat"><div class="stat-head"><span>تم التسليم</span><span class="stat-icon">✅</span></div><h2>${delivered}</h2><span class="change up">▲ ${totalOrders?Math.round((delivered/totalOrders)*100):0}%</span></div>
             </div>
 
             <div class="grid-2">
@@ -1108,66 +1313,291 @@
             </div>
 
             <div class="card panel">
-              <div class="panel-head"><div><h3>🏆 أداء المسوقين</h3><span class="muted">حسب عدد الطلبات</span></div></div>
+              <div class="panel-head"><div><h3>🏆 أفضل المسوقين</h3><span class="muted">حسب الأرباح</span></div></div>
               <div class="table-wrap">
                 <table>
                   <thead><tr><th>المسوق</th><th>عدد الطلبات</th><th>إجمالي المبيعات</th><th>الأرباح</th></tr></thead>
-                  <tbody>
-                    ${Object.entries(marketerStats).map(([id, st]) => {
-                      const m = allMarketers.find(x=>x.id===id);
-                      return `<tr><td>${m?.name||'غير معروف'}</td><td>${st.count}</td><td>${st.sales.toLocaleString()} ج</td><td>${st.profit.toLocaleString()} ج</td></tr>`;
-                    }).join('') || '<tr><td colspan="4" class="text-muted">لا توجد بيانات</td></tr>'}
-                  </tbody>
+                  <tbody>${topMarketers || '<tr><td colspan="4" class="text-muted">لا توجد بيانات</td></tr>'}</tbody>
                 </table>
               </div>
             </div>
           `;
         }
 
-        // ============================================================
-        // MARKETERS
-        // ============================================================
-        function renderMarketers() {
-            if (currentUserRole !== 'admin' && currentUserRole !== 'moderator') {
-                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
+        // ================================================================
+        // USERS
+        // ================================================================
+        function renderUsers() {
+            if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
+            const roleNames = { admin: 'مدير', moderator: 'مشرف', marketer: 'مسوق', customer_service: 'خدمة عملاء' };
+            const roleColors = { admin: 'role-admin', moderator: 'role-moderator', marketer: 'role-marketer',
+                customer_service: 'role-customer_service' };
+            let html = allUsers.map(u => {
+                const isCurrent = u.id === currentUser.uid;
+                return `
+                <div class="user-card">
+                    <div class="user-info">
+                        <div class="user-avatar">${u.name?.[0]||'👤'}</div>
+                        <div class="user-details">
+                            <h4>${u.name||'غير معروف'} ${isCurrent ? '👑' : ''}</h4>
+                            <small>${u.email||'—'}</small>
+                            <div style="margin-top:4px">
+                                <span class="role-badge ${roleColors[u.role] || 'role-marketer'}">${roleNames[u.role]||'مسوق'}</span>
+                                ${u.phone ? `<span class="text-muted" style="margin-right:8px">📱 ${u.phone}</span>` : ''}
+                                ${u.region ? `<span class="text-muted" style="margin-right:8px">📍 ${u.region}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-sm btn-primary" onclick="editUser('${u.id}')">✎</button>
+                        ${!isCurrent ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">✕</button>` : ''}
+                    </div>
+                </div>
+                `;
+            }).join('');
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>👥 إدارة الحسابات</h3><span class="muted">مدير، مشرف، مسوق، خدمة عملاء</span></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddUser()">＋ حساب جديد</button>
+              </div>
+              ${html || '<div class="text-muted" style="padding:20px;text-align:center">لا يوجد مستخدمين</div>'}
+            </div>
+          `;
+        }
+
+        // ================================================================
+        // ADD / EDIT USER
+        // ================================================================
+        window.showAddUser = function() {
+            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}">${r}</option>`).join('');
+            openModal('إنشاء حساب جديد', `
+            <form id="userForm" onsubmit="return saveUser(event)">
+              <div class="form-group"><label>الاسم *</label><input type="text" id="uName" required placeholder="الاسم الكامل" /></div>
+              <div class="form-group"><label>البريد الإلكتروني *</label><input type="email" id="uEmail" required placeholder="example@medora.com" /></div>
+              <div class="form-group"><label>كلمة المرور *</label><input type="password" id="uPassword" required placeholder="كلمة مرور قوية" minlength="6" /></div>
+              <div class="form-row">
+                <div class="form-group"><label>رقم الهاتف</label><input type="text" id="uPhone" placeholder="رقم الهاتف" /></div>
+                <div class="form-group"><label>المحافظة</label><select id="uRegion">${regionOpts}</select></div>
+              </div>
+              <div class="form-group"><label>الدور *</label>
+                <select id="uRole" required>
+                  <option value="admin">مدير</option>
+                  <option value="moderator">مشرف</option>
+                  <option value="marketer" selected>مسوق</option>
+                  <option value="customer_service">خدمة عملاء</option>
+                </select>
+              </div>
+              <div class="form-group" id="profitRateGroup" style="display:none">
+                <label>نسبة الربح (%)</label>
+                <input type="number" id="uProfitRate" value="10" min="0" max="100" />
+              </div>
+              <div class="form-group" id="moderatorGroup" style="display:none">
+                <label>المشرف المسؤول</label>
+                <select id="uModerator"><option value="">لا يوجد</option>
+                  ${allUsers.filter(u=>u.role==='moderator').map(m=>`<option value="${m.id}">${m.name||m.email}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 حفظ</button>
+                <button type="button" class="btn" onclick="closeModal()">إلغاء</button>
+              </div>
+            </form>
+          `);
+            const roleSelect = $('uRole');
+            if (roleSelect) {
+                roleSelect.onchange = function() {
+                    const isMarketer = this.value === 'marketer';
+                    const isModerator = this.value === 'moderator';
+                    $('profitRateGroup').style.display = isMarketer ? 'block' : 'none';
+                    $('moderatorGroup').style.display = (isMarketer || isModerator) ? 'block' : 'none';
+                };
+                roleSelect.onchange();
             }
-            let rows = allMarketers.map(m => `
-            <tr>
-              <td><div class="customer"><span class="avatar">${m.name?.[0]||'م'}</span>${m.name||'غير معروف'}</div></td>
-              <td>${m.email||'—'}</td>
-              <td>${m.phone||'—'}</td>
-              <td>${m.region||'—'}</td>
-              <td>${m.profitRate || 0}%</td>
-              <td>${(m.totalProfit||0).toLocaleString()} ج</td>
-              <td>
-                <button class="btn btn-sm btn-primary" onclick="editMarketer('${m.id}')">✎</button>
-                ${currentUserRole==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteMarketer('${m.id}')">✕</button>`:''}
-              </td>
-            </tr>
-          `).join('');
+        };
+
+        window.saveUser = async function(e) {
+            e.preventDefault();
+            const name = $('uName').value.trim();
+            const email = $('uEmail').value.trim();
+            const password = $('uPassword').value;
+            const phone = $('uPhone').value.trim() || '';
+            const region = $('uRegion').value || '';
+            const role = $('uRole').value;
+            const profitRate = parseFloat($('uProfitRate')?.value) || 10;
+            const moderatorId = $('uModerator')?.value || '';
+
+            if (!name || !email || !password) { toast('❌ الاسم والبريد وكلمة المرور مطلوبة', 'danger'); return false; }
+            if (password.length < 6) { toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'danger'); return false; }
+
+            try {
+                const userCred = await auth.createUserWithEmailAndPassword(email, password);
+                const uid = userCred.user.uid;
+                const userData = { name, email, role, phone, region,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+                await db.collection('users').doc(uid).set(userData);
+
+                if (role === 'marketer') {
+                    await db.collection('marketers').doc(uid).set({
+                        userId: uid,
+                        name,
+                        email,
+                        phone,
+                        region,
+                        profitRate,
+                        totalProfit: 0,
+                        moderatorId: moderatorId || '',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                toast(`✅ تم إنشاء حساب ${role === 'admin' ? 'مدير' : role === 'moderator' ? 'مشرف' : role === 'customer_service' ? 'خدمة عملاء' : 'مسوق'} بنجاح`);
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.editUser = function(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) { toast('❌ المستخدم غير موجود', 'danger'); return; }
+            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}" ${r===user.region?'selected':''}>${r}</option>`).join('');
+            const isMarketer = user.role === 'marketer';
+            const marketer = allMarketers.find(m => m.id === id);
+            const modOpts = allUsers.filter(u => u.role === 'moderator' && u.id !== id)
+                .map(m => `<option value="${m.id}" ${marketer?.moderatorId===m.id?'selected':''}>${m.name||m.email}</option>`)
+                .join('');
+
+            openModal('تعديل بيانات المستخدم', `
+            <form id="userForm" onsubmit="return updateUser('${id}', event)">
+              <div class="form-group"><label>الاسم *</label><input type="text" id="uName" value="${user.name||''}" required /></div>
+              <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="uEmail" value="${user.email||''}" disabled /></div>
+              <div class="form-row">
+                <div class="form-group"><label>رقم الهاتف</label><input type="text" id="uPhone" value="${user.phone||''}" /></div>
+                <div class="form-group"><label>المحافظة</label><select id="uRegion">${regionOpts}</select></div>
+              </div>
+              <div class="form-group"><label>الدور</label><select id="uRole" disabled>
+                  <option value="admin" ${user.role==='admin'?'selected':''}>مدير</option>
+                  <option value="moderator" ${user.role==='moderator'?'selected':''}>مشرف</option>
+                  <option value="marketer" ${user.role==='marketer'?'selected':''}>مسوق</option>
+                  <option value="customer_service" ${user.role==='customer_service'?'selected':''}>خدمة عملاء</option>
+              </select></div>
+              ${isMarketer ? `
+                <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="uProfitRate" value="${marketer?.profitRate||10}" min="0" max="100" /></div>
+                <div class="form-group"><label>المشرف المسؤول</label><select id="uModerator"><option value="">لا يوجد</option>${modOpts}</select></div>
+                <div class="form-group"><label>إجمالي الأرباح (ج)</label><input type="number" id="uTotalProfit" value="${marketer?.totalProfit||0}" disabled /></div>
+              ` : ''}
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 تحديث</button>
+                <button type="button" class="btn" onclick="closeModal()">إلغاء</button>
+              </div>
+            </form>
+          `);
+        };
+
+        window.updateUser = async function(id, e) {
+            e.preventDefault();
+            const name = $('uName').value.trim();
+            const phone = $('uPhone').value.trim() || '';
+            const region = $('uRegion').value || '';
+            const profitRate = parseFloat($('uProfitRate')?.value);
+            const moderatorId = $('uModerator')?.value || '';
+
+            if (!name) { toast('❌ الاسم مطلوب', 'danger'); return false; }
+            try {
+                await db.collection('users').doc(id).update({ name, phone, region,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                const user = allUsers.find(u => u.id === id);
+                if (user?.role === 'marketer') {
+                    await db.collection('marketers').doc(id).update({
+                        name,
+                        phone,
+                        region,
+                        profitRate: profitRate || 10,
+                        moderatorId,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                toast('✅ تم التحديث');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.deleteUser = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+            try {
+                await db.collection('users').doc(id).delete();
+                const marketer = allMarketers.find(m => m.id === id);
+                if (marketer) await db.collection('marketers').doc(id).delete();
+                const orders = allOrders.filter(o => o.marketerId === id);
+                for (const o of orders) await db.collection('orders').doc(o.id).delete();
+                toast('✅ تم الحذف');
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ================================================================
+        // MARKETERS
+        // ================================================================
+        function renderMarketers() {
+            let list = [...allMarketers];
+            if (currentUserRole === 'moderator') {
+                list = list.filter(m => m.moderatorId === currentUser.uid);
+            }
+            if (currentUserRole === 'marketer') {
+                return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
+            }
+            let rows = list.map(m => {
+                const mod = allUsers.find(u => u.id === m.moderatorId);
+                return `
+                <tr>
+                  <td><div class="customer"><span class="avatar">${m.name?.[0]||'م'}</span>${m.name||'غير معروف'}</div></td>
+                  <td>${m.email||'—'}</td>
+                  <td>${m.phone||'—'}</td>
+                  <td>${m.region||'—'}</td>
+                  <td>${m.profitRate||0}%</td>
+                  <td>${(m.totalProfit||0).toLocaleString()} ج</td>
+                  <td>${mod?.name||'غير محدد'}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary" onclick="editUser('${m.id}')">✎</button>
+                    ${currentUserRole==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteUser('${m.id}')">✕</button>`:''}
+                  </td>
+                </tr>
+                `;
+            }).join('');
 
             return `
             <div class="card panel">
-              <div class="panel-head"><div><h3>👥 قائمة المسوقين</h3><span class="muted">إدارة حسابات المسوقين ونسب الأرباح</span></div>
-                ${currentUserRole==='admin'?`<button class="btn btn-primary btn-sm" onclick="showAddMarketer()">＋ إضافة</button>`:''}
+              <div class="panel-head"><div><h3>👤 قائمة المسوقين</h3><span class="muted">${currentUserRole==='moderator'?'المسوقين التابعين لك':'جميع المسوقين'}</span></div>
+                ${currentUserRole==='admin'||currentUserRole==='moderator'?`<button class="btn btn-primary btn-sm" onclick="showAddMarketer()">＋ إضافة</button>`:''}
               </div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المحافظة</th><th>نسبة الربح</th><th>إجمالي الأرباح</th><th>إجراء</th></tr></thead>
-                  <tbody>${rows || '<tr><td colspan="7" class="text-muted">لا يوجد مسوقين</td></tr>'}</tbody>
+                  <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المحافظة</th><th>نسبة الربح</th><th>إجمالي الأرباح</th><th>المشرف</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="8" class="text-muted">لا يوجد مسوقين</td></tr>'}</tbody>
                 </table>
               </div>
             </div>
           `;
         }
 
-        // ============================================================
+        window.showAddMarketer = function() {
+            // Reuse user add with role pre-selected
+            showAddUser();
+            setTimeout(() => {
+                const role = $('uRole');
+                if (role) role.value = 'marketer';
+                if (role) role.onchange();
+            }, 200);
+        };
+
+        // ================================================================
         // PRODUCTS
-        // ============================================================
+        // ================================================================
         function renderProducts() {
-            if (currentUserRole !== 'admin') {
-                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
-            }
+            if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
             let rows = allProducts.map(p => `
             <tr>
               <td>${p.name||'—'}</td>
@@ -1182,7 +1612,6 @@
               </td>
             </tr>
           `).join('');
-
             return `
             <div class="card panel">
               <div class="panel-head"><div><h3>📦 قائمة المنتجات</h3><span class="muted">إدارة المنتجات والتسعير</span></div>
@@ -1198,384 +1627,6 @@
           `;
         }
 
-        // ============================================================
-        // ORDERS
-        // ============================================================
-        function renderOrders() {
-            let filtered = [...allOrders];
-            if (currentUserRole === 'marketer') {
-                filtered = filtered.filter(o => o.marketerId === currentUser.uid);
-            }
-            filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-            let rows = filtered.map(o => {
-                const m = allMarketers.find(x => x.id === o.marketerId);
-                return `
-              <tr>
-                <td>#${o.id.slice(0,8)}</td>
-                <td><div class="customer"><span class="avatar">${o.customerName?.[0]||'ع'}</span>${o.customerName||'عميل'}</div></td>
-                <td>${o.items?.length||0} منتج</td>
-                <td>${(o.total||0).toLocaleString()} ج</td>
-                <td>${o.region||'—'}</td>
-                <td>${o.shippingType||'—'}</td>
-                <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
-                <td>${(o.profit||0).toLocaleString()} ج</td>
-                <td><button class="btn btn-sm btn-primary" onclick="viewOrder('${o.id}')">عرض</button></td>
-              </tr>
-            `;
-            }).join('');
-
-            const regionOptions = Object.keys(allSettings.regions || {}).map(r =>
-                `<option value="${r}">${r}</option>`).join('');
-            const shippingOptions = ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب'].map(s =>
-                `<option value="${s}">${s}</option>`).join('');
-
-            return `
-            <div class="card panel">
-              <div class="panel-head">
-                <div><h3>📋 قائمة الطلبات</h3><span class="muted">إدارة جميع الطلبات</span></div>
-                <div class="flex gap-1">
-                  <select class="btn btn-sm" id="filterRegion" onchange="filterOrders()"><option value="">كل المحافظات</option>${regionOptions}</select>
-                  <select class="btn btn-sm" id="filterShipping" onchange="filterOrders()"><option value="">كل أنواع الشحن</option>${shippingOptions}</select>
-                  <select class="btn btn-sm" id="filterStatus" onchange="filterOrders()"><option value="">كل الحالات</option>
-                    <option value="جديد">جديد</option><option value="قيد التجهيز">قيد التجهيز</option>
-                    <option value="قيد الشحن">قيد الشحن</option><option value="تم التسليم">تم التسليم</option>
-                    <option value="ملغي">ملغي</option><option value="مرتجع">مرتجع</option>
-                  </select>
-                  <button class="btn btn-primary btn-sm" onclick="showAddOrder()">＋ طلب جديد</button>
-                </div>
-              </div>
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>المحافظة</th><th>نوع الشحن</th><th>الحالة</th><th>الربح</th><th>إجراء</th></tr></thead>
-                  <tbody>${rows || '<tr><td colspan="9" class="text-muted">لا توجد طلبات</td></tr>'}</tbody>
-                </table>
-              </div>
-            </div>
-          `;
-        }
-
-        function getBadgeClass(status) {
-            const map = {
-                'جديد': 'badge-info',
-                'قيد التجهيز': 'badge-warning',
-                'قيد الشحن': 'badge-info',
-                'تم التسليم': 'badge-success',
-                'ملغي': 'badge-danger',
-                'مرتجع': 'badge-secondary'
-            };
-            return map[status] || 'badge-secondary';
-        }
-
-        // ============================================================
-        // SETTINGS
-        // ============================================================
-        function renderSettings() {
-            if (currentUserRole !== 'admin') {
-                return '<div class="card panel"><div class="text-muted">غير مصرح لك بعرض هذه الصفحة.</div></div>';
-            }
-            const regions = allSettings.regions || {};
-            const regionHtml = Object.entries(regions).map(([cat, cities]) =>
-                `<div class="flex" style="margin-bottom:6px"><strong>${cat}:</strong> <span style="margin:0 8px">${cities.join('، ')}</span>
-              <button class="btn btn-sm" onclick="editRegion('${cat}')">✎</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteRegion('${cat}')">✕</button></div>`
-            ).join('');
-
-            return `
-            <div class="card panel">
-              <div class="panel-head"><div><h3>⚙️ إعدادات النظام</h3><span class="muted">المحافظات، سعر الشحن، والإعدادات العامة</span></div></div>
-              <div class="form-group">
-                <label>سعر الشحن الأساسي (ج)</label>
-                <input type="number" id="shippingCost" value="${allSettings.shippingCost||30}" style="width:200px" />
-                <button class="btn btn-primary btn-sm" onclick="updateShippingCost()">تحديث</button>
-              </div>
-              <hr style="margin:18px 0;border-color:var(--line)" />
-              <div class="panel-head"><div><h4>🏙️ تصنيف المحافظات</h4></div>
-                <button class="btn btn-primary btn-sm" onclick="showAddRegion()">＋ إضافة تصنيف</button>
-              </div>
-              ${regionHtml || '<div class="text-muted">لا توجد تصنيفات</div>'}
-              <hr style="margin:18px 0;border-color:var(--line)" />
-              <div class="panel-head"><div><h4>🚚 أنواع الشحن</h4></div></div>
-              <div class="flex gap-1">
-                <span class="badge badge-info">شركة شحن</span>
-                <span class="badge badge-success">مندوب</span>
-                <span class="badge badge-warning">داخلي - شركة</span>
-                <span class="badge badge-secondary">داخلي - مندوب</span>
-              </div>
-              <div class="text-muted" style="margin-top:8px;font-size:13px">يمكن تعديل أنواع الشحن من Firestore.</div>
-            </div>
-          `;
-        }
-
-        // ============================================================
-        // NEW ORDER FORM
-        // ============================================================
-        function renderNewOrder() {
-            return `
-            <div class="card panel">
-              <div class="panel-head"><div><h3>➕ إضافة طلب جديد</h3><span class="muted">أدخل بيانات الطلب</span></div></div>
-              ${getOrderFormHTML()}
-            </div>
-          `;
-        }
-
-        function getOrderFormHTML() {
-            const productOpts = allProducts.map(p =>
-                `<option value="${p.id}" data-price="${p.sellPrice||0}" data-cost="${p.costPrice||0}" data-profit="${p.profit||0}">${p.name} (${p.sellPrice||0} ج)</option>`
-            ).join('');
-
-            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
-                `<option value="${r}">${r}</option>`).join('');
-
-            const shippingOpts = ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب'].map(s =>
-                `<option value="${s}">${s}</option>`).join('');
-
-            const marketerOpts = allMarketers.map(m =>
-                `<option value="${m.id}">${m.name||m.email}</option>`).join('');
-
-            return `
-            <form id="orderForm" onsubmit="return submitOrder(event)">
-              <div class="form-row">
-                <div class="form-group">
-                  <label>اسم العميل *</label>
-                  <input type="text" id="orderCustomer" required placeholder="أدخل اسم العميل" />
-                </div>
-                <div class="form-group">
-                  <label>رقم العميل (اختياري)</label>
-                  <input type="text" id="orderPhone" placeholder="رقم الهاتف" />
-                </div>
-              </div>
-              <div class="form-group">
-                <label>المنتج *</label>
-                <select id="orderProduct" onchange="updateOrderProduct()">
-                  <option value="">اختر منتج</option>
-                  ${productOpts}
-                </select>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>الكمية</label>
-                  <input type="number" id="orderQty" value="1" min="1" onchange="updateOrderProduct()" />
-                </div>
-                <div class="form-group">
-                  <label>السعر الإجمالي (ج)</label>
-                  <input type="number" id="orderTotal" step="0.01" readonly />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>المحافظة *</label>
-                  <select id="orderRegion" required>${regionOpts || '<option value="">لا توجد محافظات</option>'}</select>
-                </div>
-                <div class="form-group">
-                  <label>نوع الشحن *</label>
-                  <select id="orderShipping" required>${shippingOpts}</select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>الحالة</label>
-                  <select id="orderStatus">
-                    <option value="جديد">جديد</option>
-                    <option value="قيد التجهيز">قيد التجهيز</option>
-                    <option value="قيد الشحن">قيد الشحن</option>
-                    <option value="تم التسليم">تم التسليم</option>
-                    <option value="ملغي">ملغي</option>
-                    <option value="مرتجع">مرتجع</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>المسوق المسؤول</label>
-                  <select id="orderMarketer">
-                    <option value="${currentUser.uid}">أنا (${currentUser.email})</option>
-                    ${(currentUserRole==='admin'||currentUserRole==='moderator') ? marketerOpts : ''}
-                  </select>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>ملاحظات (اختياري)</label>
-                <textarea id="orderNotes" rows="2" placeholder="ملاحظات إضافية"></textarea>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn btn-primary">💾 حفظ الطلب</button>
-                <button type="reset" class="btn">إلغاء</button>
-              </div>
-            </form>
-          `;
-        }
-
-        // ============================================================
-        // ORDER SUBMIT
-        // ============================================================
-        window.submitOrder = async function(e) {
-            e.preventDefault();
-            const customer = $('orderCustomer')?.value.trim();
-            const phone = $('orderPhone')?.value.trim() || '';
-            const productId = $('orderProduct')?.value;
-            const qty = parseInt($('orderQty')?.value) || 1;
-            const total = parseFloat($('orderTotal')?.value) || 0;
-            const region = $('orderRegion')?.value;
-            const shipping = $('orderShipping')?.value;
-            const status = $('orderStatus')?.value || 'جديد';
-            const marketerId = $('orderMarketer')?.value || currentUser.uid;
-            const notes = $('orderNotes')?.value || '';
-
-            if (!customer || !productId || !region || !shipping) {
-                toast('❌ يرجى ملء جميع الحقول المطلوبة', 'danger');
-                return false;
-            }
-
-            const product = allProducts.find(p => p.id === productId);
-            const profit = product ? (product.profit || 0) * qty : 0;
-
-            const orderData = {
-                customerName: customer,
-                customerPhone: phone,
-                items: [{ productId, qty, price: product?.sellPrice || 0 }],
-                total: total,
-                region: region,
-                shippingType: shipping,
-                status: status,
-                marketerId: marketerId,
-                notes: notes,
-                profit: profit,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            try {
-                await db.collection('orders').add(orderData);
-                toast('✅ تم إضافة الطلب بنجاح');
-                closeModal();
-                // تحديث أرباح المسوق
-                const mRef = db.collection('marketers').doc(marketerId);
-                await mRef.update({ totalProfit: firebase.firestore.FieldValue.increment(profit) });
-                renderCurrentPage();
-            } catch (err) {
-                toast('❌ خطأ في حفظ الطلب: ' + err.message, 'danger');
-            }
-            return false;
-        };
-
-        window.updateOrderProduct = function() {
-            const sel = $('orderProduct');
-            const qty = parseInt($('orderQty')?.value) || 1;
-            const opt = sel?.options[sel.selectedIndex];
-            if (opt && opt.value) {
-                const price = parseFloat(opt.dataset.price) || 0;
-                const total = price * qty;
-                if ($('orderTotal')) $('orderTotal').value = total.toFixed(2);
-            }
-        };
-
-        // ============================================================
-        // CRUD: Marketers
-        // ============================================================
-        window.showAddMarketer = function() {
-            openModal('إضافة مسوق جديد', `
-            <form id="marketerForm" onsubmit="return saveMarketer(event)">
-              <div class="form-group"><label>الاسم *</label><input type="text" id="mName" required /></div>
-              <div class="form-group"><label>البريد الإلكتروني *</label><input type="email" id="mEmail" required /></div>
-              <div class="form-group"><label>رقم الهاتف</label><input type="text" id="mPhone" /></div>
-              <div class="form-group"><label>المحافظة</label>
-                <select id="mRegion">${Object.keys(allSettings.regions||{}).map(r=>`<option value="${r}">${r}</option>`).join('')}</select>
-              </div>
-              <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="mProfitRate" value="10" min="0" max="100" /></div>
-              <div class="form-group"><label>كلمة المرور المؤقتة</label><input type="password" id="mPassword" value="123456" /></div>
-              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
-            </form>
-          `);
-        };
-
-        window.saveMarketer = async function(e) {
-            e.preventDefault();
-            const name = $('mName')?.value.trim();
-            const email = $('mEmail')?.value.trim();
-            const phone = $('mPhone')?.value.trim() || '';
-            const region = $('mRegion')?.value || '';
-            const profitRate = parseFloat($('mProfitRate')?.value) || 10;
-            const pass = $('mPassword')?.value || '123456';
-
-            if (!name || !email) { toast('❌ الاسم والبريد مطلوبان', 'danger'); return false; }
-
-            try {
-                const userCred = await auth.createUserWithEmailAndPassword(email, pass);
-                const uid = userCred.user.uid;
-                await db.collection('users').doc(uid).set({
-                    name,
-                    email,
-                    role: 'marketer',
-                    phone,
-                    region,
-                    profitRate,
-                    totalProfit: 0,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                await db.collection('marketers').doc(uid).set({
-                    name,
-                    email,
-                    phone,
-                    region,
-                    profitRate,
-                    totalProfit: 0,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                toast('✅ تم إضافة المسوق بنجاح');
-                closeModal();
-                renderCurrentPage();
-            } catch (err) {
-                toast('❌ ' + err.message, 'danger');
-            }
-            return false;
-        };
-
-        window.editMarketer = function(id) {
-            const m = allMarketers.find(x => x.id === id);
-            if (!m) { toast('❌ المسوق غير موجود', 'danger'); return; }
-            openModal('تعديل بيانات المسوق', `
-            <form id="marketerForm" onsubmit="return updateMarketer('${id}', event)">
-              <div class="form-group"><label>الاسم *</label><input type="text" id="mName" value="${m.name||''}" required /></div>
-              <div class="form-group"><label>البريد</label><input type="email" id="mEmail" value="${m.email||''}" disabled /></div>
-              <div class="form-group"><label>الهاتف</label><input type="text" id="mPhone" value="${m.phone||''}" /></div>
-              <div class="form-group"><label>المحافظة</label>
-                <select id="mRegion">${Object.keys(allSettings.regions||{}).map(r=>`<option value="${r}" ${r===m.region?'selected':''}>${r}</option>`).join('')}</select>
-              </div>
-              <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="mProfitRate" value="${m.profitRate||10}" min="0" max="100" /></div>
-              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 تحديث</button></div>
-            </form>
-          `);
-        };
-
-        window.updateMarketer = async function(id, e) {
-            e.preventDefault();
-            const name = $('mName')?.value.trim();
-            const phone = $('mPhone')?.value.trim() || '';
-            const region = $('mRegion')?.value || '';
-            const profitRate = parseFloat($('mProfitRate')?.value) || 10;
-            if (!name) { toast('❌ الاسم مطلوب', 'danger'); return false; }
-            try {
-                await db.collection('marketers').doc(id).update({ name, phone, region, profitRate });
-                await db.collection('users').doc(id).update({ name, phone, region, profitRate });
-                toast('✅ تم التحديث');
-                closeModal();
-                renderCurrentPage();
-            } catch (err) { toast('❌ ' + err.message, 'danger'); }
-            return false;
-        };
-
-        window.deleteMarketer = async function(id) {
-            if (!confirm('هل أنت متأكد من حذف هذا المسوق؟')) return;
-            try {
-                await db.collection('marketers').doc(id).delete();
-                await db.collection('users').doc(id).delete();
-                toast('✅ تم الحذف');
-                renderCurrentPage();
-            } catch (err) { toast('❌ ' + err.message, 'danger'); }
-        };
-
-        // ============================================================
-        // CRUD: Products
-        // ============================================================
         window.showAddProduct = function() {
             openModal('إضافة منتج جديد', `
             <form id="productForm" onsubmit="return saveProduct(event)">
@@ -1617,7 +1668,6 @@
             const cost = parseFloat($('pCost')?.value) || 0;
             const profit = sell - cost;
             const profitRate = sell ? (profit / sell) * 100 : 0;
-
             if (!name || !sell) { toast('❌ الاسم وسعر البيع مطلوبان', 'danger'); return false; }
             try {
                 await db.collection('products').add({
@@ -1691,24 +1741,227 @@
             } catch (err) { toast('❌ ' + err.message, 'danger'); }
         };
 
-        // ============================================================
-        // CRUD: Orders
-        // ============================================================
-        window.showAddOrder = function() {
-            openModal('إضافة طلب جديد', getOrderFormHTML());
-            setTimeout(() => {
-                const sel = $('orderProduct');
-                if (sel) sel.onchange = window.updateOrderProduct;
-                const qty = $('orderQty');
-                if (qty) qty.onchange = window.updateOrderProduct;
-            }, 100);
+        // ================================================================
+        // ORDERS
+        // ================================================================
+        function renderOrders() {
+            let filtered = [...allOrders];
+            if (currentUserRole === 'marketer') {
+                filtered = filtered.filter(o => o.marketerId === currentUser.uid);
+            } else if (currentUserRole === 'moderator') {
+                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid).map(m => m.id);
+                filtered = filtered.filter(o => myMarketers.includes(o.marketerId));
+            }
+            // customer_service sees all
+            filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            // Filters
+            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}">${r}</option>`).join('');
+            const shipOpts = (allSettings.shippingTypes || []).map(s =>
+                `<option value="${s}">${s}</option>`).join('');
+            const statusOpts = ['جديد', 'قيد التجهيز', 'قيد الشحن', 'تم التسليم', 'ملغي', 'مرتجع']
+                .map(s => `<option value="${s}">${s}</option>`).join('');
+
+            let rows = filtered.map(o => {
+                const m = allMarketers.find(x => x.id === o.marketerId);
+                return `
+                <tr>
+                  <td>#${o.id.slice(0,8)}</td>
+                  <td><div class="customer"><span class="avatar">${o.customerName?.[0]||'ع'}</span>${o.customerName||'عميل'}</div></td>
+                  <td>${o.products?.length||0} منتج</td>
+                  <td>${(o.total||0).toLocaleString()} ج</td>
+                  <td>${o.region||'—'}</td>
+                  <td>${o.shippingType||'—'}</td>
+                  <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
+                  <td>${(o.profit||0).toLocaleString()} ج</td>
+                  <td>${m?.name||'—'}</td>
+                  <td><button class="btn btn-sm btn-primary" onclick="viewOrder('${o.id}')">عرض</button></td>
+                </tr>
+                `;
+            }).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head">
+                <div><h3>📋 قائمة الطلبات</h3><span class="muted">${currentUserRole==='marketer'?'طلباتي':currentUserRole==='moderator'?'طلبات المسوقين التابعين':'جميع الطلبات'}</span></div>
+                <div class="flex gap-1">
+                  <select class="btn btn-sm" id="filterRegion"><option value="">كل المحافظات</option>${regionOpts}</select>
+                  <select class="btn btn-sm" id="filterShipping"><option value="">كل أنواع الشحن</option>${shipOpts}</select>
+                  <select class="btn btn-sm" id="filterStatus"><option value="">كل الحالات</option>${statusOpts}</select>
+                  ${currentUserRole!=='customer_service'?`<button class="btn btn-primary btn-sm" onclick="showAddOrder()">＋ طلب جديد</button>`:''}
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>المحافظة</th><th>نوع الشحن</th><th>الحالة</th><th>الربح</th><th>المسوق</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="10" class="text-muted">لا توجد طلبات</td></tr>'}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        function getBadgeClass(status) {
+            const map = {
+                'جديد': 'badge-info',
+                'قيد التجهيز': 'badge-warning',
+                'قيد الشحن': 'badge-info',
+                'تم التسليم': 'badge-success',
+                'ملغي': 'badge-danger',
+                'مرتجع': 'badge-secondary'
+            };
+            return map[status] || 'badge-secondary';
+        }
+
+        // ================================================================
+        // NEW ORDER FORM
+        // ================================================================
+        function renderNewOrder() {
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>➕ إضافة طلب جديد</h3><span class="muted">أدخل بيانات الطلب</span></div></div>
+              ${getOrderFormHTML()}
+            </div>
+          `;
+        }
+
+        function getOrderFormHTML() {
+            const productOpts = allProducts.map(p =>
+                `<option value="${p.id}" data-sell="${p.sellPrice||0}" data-cost="${p.costPrice||0}" data-profit="${p.profit||0}">${p.name} (بيع: ${p.sellPrice||0} ج)</option>`
+            ).join('');
+            const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
+                `<option value="${r}">${r}</option>`).join('');
+            const shipOpts = (allSettings.shippingTypes || []).map(s =>
+                `<option value="${s}">${s}</option>`).join('');
+            const statusOpts = ['جديد', 'قيد التجهيز', 'قيد الشحن', 'تم التسليم', 'ملغي', 'مرتجع']
+                .map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Marketers list for admin/moderator
+            let marketerOpts = '';
+            if (currentUserRole === 'admin') {
+                marketerOpts = allMarketers.map(m =>
+                    `<option value="${m.id}">${m.name||m.email}</option>`).join('');
+            } else if (currentUserRole === 'moderator') {
+                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid);
+                marketerOpts = myMarketers.map(m =>
+                    `<option value="${m.id}">${m.name||m.email}</option>`).join('');
+            }
+
+            return `
+            <form id="orderForm" onsubmit="return submitOrder(event)">
+              <div class="form-row">
+                <div class="form-group"><label>اسم العميل *</label><input type="text" id="orderCustomer" required placeholder="أدخل اسم العميل" /></div>
+                <div class="form-group"><label>رقم العميل</label><input type="text" id="orderPhone" placeholder="رقم الهاتف" /></div>
+              </div>
+              <div class="form-group"><label>المنتج *</label><select id="orderProduct" onchange="updateOrderProduct()"><option value="">اختر منتج</option>${productOpts}</select></div>
+              <div class="form-row">
+                <div class="form-group"><label>الكمية</label><input type="number" id="orderQty" value="1" min="1" onchange="updateOrderProduct()" /></div>
+                <div class="form-group"><label>الإجمالي (ج)</label><input type="number" id="orderTotal" step="0.01" readonly /></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>المحافظة *</label><select id="orderRegion" required>${regionOpts}</select></div>
+                <div class="form-group"><label>نوع الشحن *</label><select id="orderShipping" required>${shipOpts}</select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>سعر الشحن (ج)</label><input type="number" id="orderShippingCost" value="${allSettings.shippingCost||30}" step="0.01" /></div>
+                <div class="form-group"><label>الحالة</label><select id="orderStatus">${statusOpts}</select></div>
+              </div>
+              <div class="form-group"><label>المسوق المسؤول</label>
+                <select id="orderMarketer">
+                  ${currentUserRole==='admin'||currentUserRole==='moderator' ? marketerOpts : `<option value="${currentUser.uid}">أنا (${currentUser.email})</option>`}
+                </select>
+              </div>
+              <div class="form-group"><label>ملاحظات</label><textarea id="orderNotes" rows="2" placeholder="ملاحظات إضافية"></textarea></div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 حفظ الطلب</button>
+                <button type="reset" class="btn">إلغاء</button>
+              </div>
+            </form>
+          `;
+        }
+
+        // ================================================================
+        // SUBMIT ORDER
+        // ================================================================
+        window.submitOrder = async function(e) {
+            e.preventDefault();
+            const customer = $('orderCustomer')?.value.trim();
+            const phone = $('orderPhone')?.value.trim() || '';
+            const productId = $('orderProduct')?.value;
+            const qty = parseInt($('orderQty')?.value) || 1;
+            const total = parseFloat($('orderTotal')?.value) || 0;
+            const region = $('orderRegion')?.value;
+            const shipping = $('orderShipping')?.value;
+            const shippingCost = parseFloat($('orderShippingCost')?.value) || 0;
+            const status = $('orderStatus')?.value || 'جديد';
+            const marketerId = $('orderMarketer')?.value || currentUser.uid;
+            const notes = $('orderNotes')?.value || '';
+
+            if (!customer || !productId || !region || !shipping) {
+                toast('❌ يرجى ملء جميع الحقول المطلوبة', 'danger');
+                return false;
+            }
+
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) { toast('❌ المنتج غير موجود', 'danger'); return false; }
+
+            const sellPrice = product.sellPrice || 0;
+            const costPrice = product.costPrice || 0;
+            const marketer = allMarketers.find(m => m.id === marketerId);
+            const marketerRate = marketer?.profitRate || 10;
+
+            // Profit = (sell - cost) * qty * (marketerRate / 100)
+            const profit = (sellPrice - costPrice) * qty * (marketerRate / 100);
+
+            const orderData = {
+                customerName: customer,
+                customerPhone: phone,
+                products: [{ productId, qty, price: sellPrice, cost: costPrice }],
+                total: total + shippingCost,
+                region: region,
+                shippingType: shipping,
+                shippingCost: shippingCost,
+                status: status,
+                marketerId: marketerId,
+                notes: notes,
+                profit: profit,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('orders').add(orderData);
+                // Update marketer total profit
+                await db.collection('marketers').doc(marketerId).update({
+                    totalProfit: firebase.firestore.FieldValue.increment(profit)
+                });
+                toast('✅ تم إضافة الطلب بنجاح');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ خطأ: ' + err.message, 'danger'); }
+            return false;
         };
 
+        window.updateOrderProduct = function() {
+            const sel = $('orderProduct');
+            const qty = parseInt($('orderQty')?.value) || 1;
+            const opt = sel?.options[sel.selectedIndex];
+            if (opt && opt.value) {
+                const price = parseFloat(opt.dataset.sell) || 0;
+                const total = price * qty;
+                if ($('orderTotal')) $('orderTotal').value = total.toFixed(2);
+            }
+        };
+
+        // ================================================================
+        // VIEW ORDER
+        // ================================================================
         window.viewOrder = function(id) {
             const o = allOrders.find(x => x.id === id);
             if (!o) { toast('❌ الطلب غير موجود', 'danger'); return; }
             const m = allMarketers.find(x => x.id === o.marketerId);
-            const items = o.items?.map(it => {
+            const items = o.products?.map(it => {
                 const p = allProducts.find(pr => pr.id === it.productId);
                 return `${p?.name||'منتج'} × ${it.qty||1} = ${((it.price||0)*(it.qty||1)).toLocaleString()} ج`;
             }).join('<br>') || '—';
@@ -1721,6 +1974,7 @@
               <div><strong>الإجمالي:</strong> ${(o.total||0).toLocaleString()} ج</div>
               <div><strong>المحافظة:</strong> ${o.region||'—'}</div>
               <div><strong>نوع الشحن:</strong> ${o.shippingType||'—'}</div>
+              <div><strong>سعر الشحن:</strong> ${(o.shippingCost||0).toLocaleString()} ج</div>
               <div><strong>الحالة:</strong> <span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></div>
               <div><strong>الربح:</strong> ${(o.profit||0).toLocaleString()} ج</div>
               <div><strong>المسوق:</strong> ${m?.name||'غير معروف'}</div>
@@ -1728,15 +1982,10 @@
               <hr style="border-color:var(--line)" />
               <div class="flex gap-1">
                 <select id="orderStatusEdit" class="btn btn-sm">
-                  <option value="جديد" ${o.status==='جديد'?'selected':''}>جديد</option>
-                  <option value="قيد التجهيز" ${o.status==='قيد التجهيز'?'selected':''}>قيد التجهيز</option>
-                  <option value="قيد الشحن" ${o.status==='قيد الشحن'?'selected':''}>قيد الشحن</option>
-                  <option value="تم التسليم" ${o.status==='تم التسليم'?'selected':''}>تم التسليم</option>
-                  <option value="ملغي" ${o.status==='ملغي'?'selected':''}>ملغي</option>
-                  <option value="مرتجع" ${o.status==='مرتجع'?'selected':''}>مرتجع</option>
+                  ${['جديد','قيد التجهيز','قيد الشحن','تم التسليم','ملغي','مرتجع'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}
                 </select>
                 <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${id}')">تحديث الحالة</button>
-                ${currentUserRole==='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteOrder('${id}')">حذف</button>`:''}
+                ${currentUserRole==='admin'||currentUserRole==='moderator'?`<button class="btn btn-danger btn-sm" onclick="deleteOrder('${id}')">حذف</button>`:''}
               </div>
             </div>
           `);
@@ -1759,6 +2008,13 @@
         window.deleteOrder = async function(id) {
             if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
             try {
+                const o = allOrders.find(x => x.id === id);
+                if (o) {
+                    // Decrease marketer profit
+                    await db.collection('marketers').doc(o.marketerId).update({
+                        totalProfit: firebase.firestore.FieldValue.increment(-(o.profit || 0))
+                    });
+                }
                 await db.collection('orders').doc(id).delete();
                 toast('✅ تم الحذف');
                 closeModal();
@@ -1766,15 +2022,50 @@
             } catch (err) { toast('❌ ' + err.message, 'danger'); }
         };
 
-        // ============================================================
-        // SETTINGS: Regions & Shipping
-        // ============================================================
+        // ================================================================
+        // SETTINGS
+        // ================================================================
+        function renderSettings() {
+            if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
+            const regions = allSettings.regions || {};
+            const regionHtml = Object.entries(regions).map(([cat, cities]) =>
+                `<div class="flex" style="margin-bottom:6px"><strong>${cat}:</strong> <span style="margin:0 8px">${cities.join('، ')}</span>
+              <button class="btn btn-sm" onclick="editRegion('${cat}')">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteRegion('${cat}')">✕</button></div>`
+            ).join('');
+
+            const shipTypes = allSettings.shippingTypes || [];
+            const shipHtml = shipTypes.map(s =>
+                `<span class="badge badge-info" style="margin:4px">${s}</span>`
+            ).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>⚙️ إعدادات النظام</h3><span class="muted">المحافظات، سعر الشحن، أنواع الشحن</span></div></div>
+              <div class="form-group">
+                <label>سعر الشحن الأساسي (ج)</label>
+                <input type="number" id="shippingCost" value="${allSettings.shippingCost||30}" style="width:200px" />
+                <button class="btn btn-primary btn-sm" onclick="updateShippingCost()">تحديث</button>
+              </div>
+              <hr style="margin:18px 0;border-color:var(--line)" />
+              <div class="panel-head"><div><h4>🏙️ تصنيف المحافظات</h4></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddRegion()">＋ إضافة تصنيف</button>
+              </div>
+              ${regionHtml || '<div class="text-muted">لا توجد تصنيفات</div>'}
+              <hr style="margin:18px 0;border-color:var(--line)" />
+              <div class="panel-head"><div><h4>🚚 أنواع الشحن</h4></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddShippingType()">＋ إضافة نوع</button>
+              </div>
+              <div class="flex" style="flex-wrap:wrap">${shipHtml || '<div class="text-muted">لا توجد أنواع</div>'}</div>
+            </div>
+          `;
+        }
+
         window.updateShippingCost = async function() {
             const val = parseFloat($('shippingCost')?.value);
             if (isNaN(val) || val < 0) { toast('❌ قيمة غير صحيحة', 'danger'); return; }
             try {
                 await db.collection('settings').doc('general').set({ shippingCost: val }, { merge: true });
-                allSettings.shippingCost = val;
                 toast('✅ تم تحديث سعر الشحن');
             } catch (err) { toast('❌ ' + err.message, 'danger'); }
         };
@@ -1782,10 +2073,8 @@
         window.showAddRegion = function() {
             openModal('إضافة تصنيف محافظة جديد', `
             <form id="regionForm" onsubmit="return saveRegion(event)">
-              <div class="form-group"><label>اسم التصنيف (مثل: بحري، قبلي، داخلي) *</label><input type="text" id="rName" required placeholder="مثال: بحري" /></div>
-              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label>
-                <textarea id="rCities" rows="3" placeholder="الإسكندرية، دمياط، بورسعيد" required></textarea>
-              </div>
+              <div class="form-group"><label>اسم التصنيف *</label><input type="text" id="rName" required placeholder="مثال: بحري" /></div>
+              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label><textarea id="rCities" rows="3" placeholder="الإسكندرية، دمياط، بورسعيد" required></textarea></div>
               <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
             </form>
           `);
@@ -1794,12 +2083,11 @@
         window.saveRegion = async function(e) {
             e.preventDefault();
             const name = $('rName')?.value.trim();
-            const cities = $('rCities')?.value.split(',').map(s => s.trim()).filter(Boolean);
+            const cities = $('rCities')?.value.split(/[,،]/).map(s => s.trim()).filter(Boolean);
             if (!name || !cities.length) { toast('❌ الاسم والمدن مطلوبان', 'danger'); return false; }
             try {
                 const regions = { ...allSettings.regions, [name]: cities };
                 await db.collection('settings').doc('general').set({ regions }, { merge: true });
-                allSettings.regions = regions;
                 toast('✅ تم إضافة التصنيف');
                 closeModal();
                 renderCurrentPage();
@@ -1812,9 +2100,7 @@
             openModal(`تعديل تصنيف ${cat}`, `
             <form id="regionForm" onsubmit="return updateRegion('${cat}', event)">
               <div class="form-group"><label>اسم التصنيف *</label><input type="text" id="rName" value="${cat}" required /></div>
-              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label>
-                <textarea id="rCities" rows="3" required>${cities.join('، ')}</textarea>
-              </div>
+              <div class="form-group"><label>المدن (مفصولة بفاصلة) *</label><textarea id="rCities" rows="3" required>${cities.join('، ')}</textarea></div>
               <div class="form-actions"><button type="submit" class="btn btn-primary">💾 تحديث</button></div>
             </form>
           `);
@@ -1830,7 +2116,6 @@
                 delete regions[oldCat];
                 regions[name] = cities;
                 await db.collection('settings').doc('general').set({ regions }, { merge: true });
-                allSettings.regions = regions;
                 toast('✅ تم التحديث');
                 closeModal();
                 renderCurrentPage();
@@ -1844,24 +2129,45 @@
                 const regions = { ...allSettings.regions };
                 delete regions[cat];
                 await db.collection('settings').doc('general').set({ regions }, { merge: true });
-                allSettings.regions = regions;
                 toast('✅ تم الحذف');
                 renderCurrentPage();
             } catch (err) { toast('❌ ' + err.message, 'danger'); }
         };
 
-        // ============================================================
-        // FILTER ORDERS
-        // ============================================================
+        window.showAddShippingType = function() {
+            openModal('إضافة نوع شحن جديد', `
+            <form id="shipForm" onsubmit="return saveShippingType(event)">
+              <div class="form-group"><label>نوع الشحن *</label><input type="text" id="sName" required placeholder="مثال: شحن سريع" /></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">💾 حفظ</button></div>
+            </form>
+          `);
+        };
+
+        window.saveShippingType = async function(e) {
+            e.preventDefault();
+            const name = $('sName')?.value.trim();
+            if (!name) { toast('❌ الاسم مطلوب', 'danger'); return false; }
+            try {
+                const types = [...(allSettings.shippingTypes || []), name];
+                await db.collection('settings').doc('general').set({ shippingTypes: types }, { merge: true });
+                toast('✅ تم إضافة نوع الشحن');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        // ================================================================
+        // FILTER ORDERS (client-side)
+        // ================================================================
         window.filterOrders = function() {
-            renderCurrentPage();
             const region = $('filterRegion')?.value || '';
             const shipping = $('filterShipping')?.value || '';
             const status = $('filterStatus')?.value || '';
             const rows = document.querySelectorAll('#pageContent table tbody tr');
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length < 7) return;
+                if (cells.length < 10) return;
                 const regionCell = cells[4]?.textContent || '';
                 const shippingCell = cells[5]?.textContent || '';
                 const statusCell = cells[6]?.textContent || '';
@@ -1873,31 +2179,30 @@
             });
         };
 
-        // ============================================================
-        // LOAD ALL DATA
-        // ============================================================
+        // ================================================================
+        // LOAD DATA
+        // ================================================================
         async function loadAllData() {
             try {
                 const settingsDoc = await db.collection('settings').doc('general').get();
-                if (settingsDoc.exists) {
-                    allSettings = settingsDoc.data();
-                }
+                if (settingsDoc.exists) allSettings = settingsDoc.data();
                 const mSnap = await db.collection('marketers').get();
                 allMarketers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 const pSnap = await db.collection('products').get();
                 allProducts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 const oSnap = await db.collection('orders').get();
                 allOrders = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const uSnap = await db.collection('users').get();
+                allUsers = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderCurrentPage();
-            } catch (err) {
-                console.warn('Load data error:', err);
-            }
+            } catch (err) { console.warn('Load data error:', err); }
         }
 
-        // ============================================================
+        // ================================================================
         // BIND EVENTS
-        // ============================================================
+        // ================================================================
         function bindEvents() {
+            // Chart
             const chartCanvas = document.getElementById('dashChart');
             if (chartCanvas && currentTab === 'dashboard') {
                 if (window._dashChart) { window._dashChart.destroy(); }
@@ -1938,17 +2243,15 @@
                 });
             }
 
-            const filterRegion = $('filterRegion');
-            const filterShipping = $('filterShipping');
-            const filterStatus = $('filterStatus');
-            if (filterRegion) filterRegion.onchange = window.filterOrders;
-            if (filterShipping) filterShipping.onchange = window.filterOrders;
-            if (filterStatus) filterStatus.onchange = window.filterOrders;
+            // Filters
+            ['filterRegion', 'filterShipping', 'filterStatus'].forEach(id => {
+                const el = $(id);
+                if (el) el.onchange = window.filterOrders;
+            });
 
+            // Order form
             const orderForm = $('orderForm');
-            if (orderForm) {
-                orderForm.onsubmit = window.submitOrder;
-            }
+            if (orderForm) orderForm.onsubmit = window.submitOrder;
             const prodSel = $('orderProduct');
             if (prodSel) {
                 prodSel.onchange = window.updateOrderProduct;
@@ -1958,9 +2261,9 @@
             }
         }
 
-        // ============================================================
-        // GLOBAL FUNCTIONS
-        // ============================================================
+        // ================================================================
+        // GLOBALS EXPOSED
+        // ================================================================
         window.toggleSidebar = toggleSidebar;
         window.toggleTheme = toggleTheme;
         window.notify = notify;
@@ -1968,8 +2271,35 @@
         window.handleActionBtn = handleActionBtn;
         window.closeModal = closeModal;
         window.toast = toast;
+        window.calcProductProfit = calcProductProfit;
+        window.updateOrderProduct = updateOrderProduct;
+        window.submitOrder = submitOrder;
+        window.updateOrderStatus = updateOrderStatus;
+        window.deleteOrder = deleteOrder;
+        window.viewOrder = viewOrder;
+        window.filterOrders = filterOrders;
+        window.showAddUser = showAddUser;
+        window.saveUser = saveUser;
+        window.editUser = editUser;
+        window.updateUser = updateUser;
+        window.deleteUser = deleteUser;
+        window.showAddMarketer = showAddMarketer;
+        window.showAddProduct = showAddProduct;
+        window.saveProduct = saveProduct;
+        window.editProduct = editProduct;
+        window.updateProduct = updateProduct;
+        window.deleteProduct = deleteProduct;
+        window.showAddOrder = showAddOrder;
+        window.updateShippingCost = updateShippingCost;
+        window.showAddRegion = showAddRegion;
+        window.saveRegion = saveRegion;
+        window.editRegion = editRegion;
+        window.updateRegion = updateRegion;
+        window.deleteRegion = deleteRegion;
+        window.showAddShippingType = showAddShippingType;
+        window.saveShippingType = saveShippingType;
 
-        console.log('🚀 MEDORA system ready with Firebase');
+        console.log('🚀 MEDORA Professional ready with Firebase');
     </script>
 </body>
 </html>
