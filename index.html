@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MEDORA - نظام إدارة الطلبات المتكامل</title>
+    <title>MEDORA - نظام إدارة الصفحات</title>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
     </script>
@@ -496,12 +496,6 @@
             font-size: 14px;
             flex-shrink: 0;
         }
-        .empty {
-            padding: 30px;
-            text-align: center;
-            color: var(--muted);
-            display: none;
-        }
 
         /* ========== FORMS ========== */
         .form-group {
@@ -682,6 +676,47 @@
             display: flex;
             gap: 8px;
         }
+        .page-tag {
+            background: var(--primary);
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+
+        /* ========== PAGE CARDS ========== */
+        .page-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .page-card:hover {
+            box-shadow: var(--shadow);
+        }
+        .page-info h4 {
+            margin: 0 0 4px;
+        }
+        .page-info small {
+            color: var(--muted);
+        }
+        .page-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+        }
+        .page-stats span {
+            color: var(--muted);
+        }
+        .page-stats strong {
+            color: var(--text);
+        }
 
         /* ========== RESPONSIVE ========== */
         @media (max-width: 1000px) {
@@ -726,6 +761,10 @@
             }
             .modal-box {
                 padding: 20px;
+            }
+            .page-stats {
+                flex-direction: column;
+                gap: 4px;
             }
         }
         @media (max-width: 480px) {
@@ -776,7 +815,7 @@
     <div id="loginPage">
         <div class="login-box">
             <h2>🔐 MEDORA</h2>
-            <p>نظام إدارة الطلبات المتكامل – سجل الدخول</p>
+            <p>نظام إدارة الصفحات – سجل الدخول</p>
             <form id="loginForm" onsubmit="return handleLogin(event)">
                 <label>البريد الإلكتروني</label>
                 <input type="email" id="loginEmail" placeholder="example@medora.com" required />
@@ -787,8 +826,8 @@
                 <div class="login-role">
                     📌 <strong>مدير:</strong> admin@medora.com / admin123<br>
                     📌 <strong>مشرف:</strong> moderator@medora.com / mod123<br>
-                    📌 <strong>مسوق:</strong> marketer@medora.com / market123<br>
-                    📌 <strong>خدمة عملاء:</strong> cs@medora.com / cs123
+                    📌 <strong>مسوق (صفحة 1):</strong> marketer1@medora.com / market123<br>
+                    📌 <strong>خدمة عملاء (صفحة 1):</strong> cs1@medora.com / cs123
                 </div>
             </form>
         </div>
@@ -804,6 +843,7 @@
                     <div>
                         <h2>MEDORA</h2>
                         <small id="userRoleDisplay">مدير النظام</small>
+                        <div id="userPageDisplay" style="font-size:10px;color:#8b8cf4;margin-top:2px;"></div>
                     </div>
                 </div>
                 <span class="close-sidebar" id="closeSidebar">✕</span>
@@ -869,10 +909,12 @@
         let currentUser = null;
         let currentUserRole = 'marketer';
         let currentUserData = null;
+        let currentUserPageId = null;
         let allUsers = [];
         let allMarketers = [];
         let allProducts = [];
         let allOrders = [];
+        let allPages = [];
         let allSettings = {
             shippingCost: 30,
             regions: { 'بحري': ['الإسكندرية', 'دمياط', 'بورسعيد'], 'قبلي': ['أسيوط', 'سوهاج', 'قنا'],
@@ -880,13 +922,15 @@
             shippingTypes: ['شركة شحن', 'مندوب', 'داخلي - شركة', 'داخلي - مندوب']
         };
         let currentTab = 'dashboard';
+        let isDataLoaded = false;
 
         // Unsubscribers
         let unsubOrders = null,
             unsubMarketers = null,
             unsubProducts = null,
             unsubUsers = null,
-            unsubSettings = null;
+            unsubSettings = null,
+            unsubPages = null;
 
         // ================================================================
         // DOM HELPERS
@@ -900,7 +944,7 @@
             t.style.background = type === 'danger' ? '#c0392b' : '#151a2d';
             t.classList.add('show');
             clearTimeout(t._hide);
-            t._hide = setTimeout(() => t.classList.remove('show'), 2800);
+            t._hide = setTimeout(() => t.classList.remove('show'), 3000);
         }
 
         function closeModal() { $('modalOverlay').classList.remove('open'); }
@@ -911,13 +955,7 @@
             $('modalOverlay').classList.add('open');
         }
 
-        function toggleSidebar() {
-            $('sidebar').classList.toggle('open');
-        }
-
-        function closeSidebar() {
-            $('sidebar').classList.remove('open');
-        }
+        function toggleSidebar() { $('sidebar').classList.toggle('open'); }
 
         let darkMode = false;
 
@@ -946,14 +984,15 @@
         function notify() { toast('🔔 لديك 3 إشعارات جديدة'); }
 
         function refreshData() {
-            toast('🔄 تم تحديث البيانات');
+            toast('🔄 جاري تحديث البيانات...');
             loadAllData();
         }
 
         function handleActionBtn() {
-            if (currentTab === 'users' && currentUserRole === 'admin') showAddUser();
+            if (currentTab === 'pages' && currentUserRole === 'admin') showAddPage();
+            else if (currentTab === 'users' && currentUserRole === 'admin') showAddUser();
             else if (currentTab === 'marketers' && (currentUserRole === 'admin' || currentUserRole === 'moderator'))
-            showAddMarketer();
+            showAddUser();
             else if (currentTab === 'products' && currentUserRole === 'admin') showAddProduct();
             else if (currentTab === 'settings' && currentUserRole === 'admin') showSettingsEditor();
             else showAddOrder();
@@ -993,6 +1032,9 @@
                 unsubUsers = null; }
             if (unsubSettings) { unsubSettings();
                 unsubSettings = null; }
+            if (unsubPages) { unsubPages();
+                unsubPages = null; }
+            isDataLoaded = false;
         };
 
         // ================================================================
@@ -1006,27 +1048,39 @@
                     if (userDoc.exists) {
                         currentUserData = userDoc.data();
                         currentUserRole = currentUserData.role || 'marketer';
+                        currentUserPageId = currentUserData.pageId || null;
                     } else {
                         currentUserRole = 'marketer';
-                        currentUserData = { email: user.email, role: 'marketer', name: 'مسوق' };
+                        currentUserPageId = null;
+                        currentUserData = { email: user.email, role: 'marketer', name: 'مسوق', pageId: null };
                         await db.collection('users').doc(user.uid).set({
                             email: user.email,
                             role: 'marketer',
                             name: 'مسوق',
+                            pageId: null,
                             createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }
                 } catch (e) {
                     console.warn('User role error:', e);
                     currentUserRole = 'marketer';
-                    currentUserData = { email: user.email, role: 'marketer', name: 'مسوق' };
+                    currentUserPageId = null;
+                    currentUserData = { email: user.email, role: 'marketer', name: 'مسوق', pageId: null };
                 }
 
                 $('loginPage').style.display = 'none';
                 $('app').style.display = 'block';
                 const roleNames = { admin: 'مدير النظام', moderator: 'مشرف', marketer: 'مسوق',
-                customer_service: 'خدمة عملاء' };
+                    customer_service: 'خدمة عملاء' };
                 $('userRoleDisplay').textContent = roleNames[currentUserRole] || 'مسوق';
+
+                if (currentUserPageId) {
+                    const page = allPages.find(p => p.id === currentUserPageId);
+                    $('userPageDisplay').textContent = '📄 ' + (page?.name || 'صفحة غير معروفة');
+                } else {
+                    $('userPageDisplay').textContent = currentUserRole === 'admin' ? '🔑 تحكم كامل' : '📄 غير مخصص لصفحة';
+                }
+
                 $('todayDate').textContent = new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full' }).format(new Date());
                 initApp();
             } else {
@@ -1042,6 +1096,9 @@
                     unsubUsers = null; }
                 if (unsubSettings) { unsubSettings();
                     unsubSettings = null; }
+                if (unsubPages) { unsubPages();
+                    unsubPages = null; }
+                isDataLoaded = false;
             }
         });
 
@@ -1057,33 +1114,54 @@
             if (unsubProducts) unsubProducts();
             if (unsubUsers) unsubUsers();
             if (unsubSettings) unsubSettings();
+            if (unsubPages) unsubPages();
+
+            unsubPages = db.collection('pages').onSnapshot(snap => {
+                allPages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (currentUserPageId) {
+                    const page = allPages.find(p => p.id === currentUserPageId);
+                    $('userPageDisplay').textContent = '📄 ' + (page?.name || 'صفحة غير معروفة');
+                }
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Pages error:', err);
+            });
 
             unsubOrders = db.collection('orders').onSnapshot(snap => {
                 allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderCurrentPage();
-            }, err => console.warn('Orders error:', err));
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Orders error:', err);
+            });
 
             unsubMarketers = db.collection('marketers').onSnapshot(snap => {
                 allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderCurrentPage();
-            }, err => console.warn('Marketers error:', err));
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Marketers error:', err);
+            });
 
             unsubProducts = db.collection('products').onSnapshot(snap => {
                 allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderCurrentPage();
-            }, err => console.warn('Products error:', err));
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Products error:', err);
+            });
 
             unsubUsers = db.collection('users').onSnapshot(snap => {
                 allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderCurrentPage();
-            }, err => console.warn('Users error:', err));
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Users error:', err);
+            });
 
             unsubSettings = db.collection('settings').doc('general').onSnapshot(doc => {
                 if (doc.exists) allSettings = doc.data();
-                renderCurrentPage();
-            }, err => console.warn('Settings error:', err));
+                if (isDataLoaded) renderCurrentPage();
+            }, err => {
+                console.warn('Settings error:', err);
+            });
 
-            // ========== SIDEBAR CLOSE BEHAVIOR ==========
             setupSidebarClose();
         }
 
@@ -1093,10 +1171,8 @@
         function setupSidebarClose() {
             const sidebar = $('sidebar');
             const closeBtn = $('closeSidebar');
-            const mainContent = $('mainContent');
             const mobileMenuBtn = document.querySelector('.mobile-menu');
 
-            // Close button
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1104,14 +1180,12 @@
                 });
             }
 
-            // Close when clicking a nav link (inside sidebar)
             document.querySelectorAll('#mainNav a').forEach(link => {
                 link.addEventListener('click', () => {
                     sidebar.classList.remove('open');
                 });
             });
 
-            // Close when clicking outside sidebar (on main content) and not on mobile menu button
             document.addEventListener('click', (e) => {
                 const isSidebar = sidebar.contains(e.target);
                 const isMobileMenu = mobileMenuBtn && mobileMenuBtn.contains(e.target);
@@ -1120,10 +1194,38 @@
                 }
             });
 
-            // Prevent closing when clicking inside sidebar
             sidebar.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
+        }
+
+        // ================================================================
+        // FILTER DATA BY PAGE
+        // ================================================================
+        function getFilteredOrders() {
+            let filtered = [...allOrders];
+            if (currentUserRole === 'admin' || currentUserRole === 'moderator') {
+                return filtered;
+            }
+            if (currentUserPageId) {
+                filtered = filtered.filter(o => o.pageId === currentUserPageId);
+            } else {
+                filtered = [];
+            }
+            return filtered;
+        }
+
+        function getFilteredMarketers() {
+            let filtered = [...allMarketers];
+            if (currentUserRole === 'admin' || currentUserRole === 'moderator') {
+                return filtered;
+            }
+            if (currentUserPageId) {
+                filtered = filtered.filter(m => m.pageId === currentUserPageId);
+            } else {
+                filtered = [];
+            }
+            return filtered;
         }
 
         // ================================================================
@@ -1132,9 +1234,11 @@
         function buildNav() {
             const nav = $('mainNav');
             let links = [];
+
             if (currentUserRole === 'admin') {
                 links = [
                     { id: 'dashboard', label: '📊 لوحة التحكم' },
+                    { id: 'pages', label: '📄 إدارة الصفحات' },
                     { id: 'users', label: '👥 إدارة الحسابات' },
                     { id: 'marketers', label: '👤 المسوقين' },
                     { id: 'products', label: '📦 المنتجات' },
@@ -1144,13 +1248,13 @@
             } else if (currentUserRole === 'moderator') {
                 links = [
                     { id: 'dashboard', label: '📊 لوحة التحكم' },
-                    { id: 'orders', label: '📋 طلبات المسوقين' },
-                    { id: 'marketers', label: '👤 المسوقين التابعين' },
+                    { id: 'orders', label: '📋 الطلبات' },
+                    { id: 'marketers', label: '👤 المسوقين' },
                 ];
             } else if (currentUserRole === 'customer_service') {
                 links = [
                     { id: 'dashboard', label: '📊 لوحة التحكم' },
-                    { id: 'orders', label: '📋 جميع الطلبات' },
+                    { id: 'orders', label: '📋 الطلبات' },
                 ];
             } else { // marketer
                 links = [
@@ -1174,6 +1278,7 @@
 
             const titles = {
                 dashboard: 'لوحة التحكم',
+                pages: 'إدارة الصفحات',
                 users: 'إدارة الحسابات',
                 marketers: 'إدارة المسوقين',
                 products: 'إدارة المنتجات',
@@ -1187,6 +1292,9 @@
             if (currentTab === 'newOrder' || currentTab === 'orders') {
                 actionBtn.style.display = 'inline-flex';
                 actionBtn.textContent = '＋ طلب جديد';
+            } else if (currentTab === 'pages' && currentUserRole === 'admin') {
+                actionBtn.style.display = 'inline-flex';
+                actionBtn.textContent = '＋ صفحة جديدة';
             } else if (currentTab === 'users' && currentUserRole === 'admin') {
                 actionBtn.style.display = 'inline-flex';
                 actionBtn.textContent = '＋ حساب جديد';
@@ -1208,10 +1316,14 @@
         // RENDER
         // ================================================================
         function renderCurrentPage() {
+            if (!isDataLoaded) return;
             const content = $('pageContent');
             switch (currentTab) {
                 case 'dashboard':
                     content.innerHTML = renderDashboard();
+                    break;
+                case 'pages':
+                    content.innerHTML = renderPages();
                     break;
                 case 'users':
                     content.innerHTML = renderUsers();
@@ -1241,22 +1353,21 @@
         // DASHBOARD
         // ================================================================
         function renderDashboard() {
-            // Filter orders based on role
-            let filteredOrders = [...allOrders];
-            if (currentUserRole === 'marketer') {
-                filteredOrders = filteredOrders.filter(o => o.marketerId === currentUser.uid);
-            } else if (currentUserRole === 'moderator') {
-                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid).map(m => m.id);
-                filteredOrders = filteredOrders.filter(o => myMarketers.includes(o.marketerId));
-            }
-            // customer_service sees all
+            const filteredOrders = getFilteredOrders();
 
             const totalOrders = filteredOrders.length;
             const totalSales = filteredOrders.reduce((s, o) => s + (o.total || 0), 0);
             const totalProfit = filteredOrders.reduce((s, o) => s + (o.profit || 0), 0);
             const delivered = filteredOrders.filter(o => o.status === 'تم التسليم').length;
 
-            // Status distribution
+            let pageName = 'جميع الصفحات';
+            if (currentUserPageId) {
+                const page = allPages.find(p => p.id === currentUserPageId);
+                pageName = page?.name || 'صفحتي';
+            }
+            if (currentUserRole === 'admin') pageName = 'جميع الصفحات (مدير)';
+            if (currentUserRole === 'moderator') pageName = 'جميع الصفحات (مشرف)';
+
             const statusCounts = {};
             filteredOrders.forEach(o => {
                 const s = o.status || 'جديد';
@@ -1276,7 +1387,6 @@
                 return `<div class="status-row"><span>${label}</span><div class="bar"><span style="width:${pct}%;background:${color}"></span></div><b>${count}</b></div>`;
             }).join('');
 
-            // Top marketers
             const marketerStats = {};
             filteredOrders.forEach(o => {
                 const m = o.marketerId || 'unknown';
@@ -1294,6 +1404,10 @@
                 }).join('');
 
             return `
+            <div style="margin-bottom:12px;font-size:14px;color:var(--muted);">
+              📄 عرض بيانات: <strong style="color:var(--text)">${pageName}</strong>
+              ${currentUserPageId ? '' : ' (للمدير/المشرف عرض جميع الصفحات)'}
+            </div>
             <div class="cards">
               <div class="card stat"><div class="stat-head"><span>إجمالي الطلبات</span><span class="stat-icon">📋</span></div><h2>${totalOrders}</h2><span class="change up">▲ ${totalOrders?12:0}%</span></div>
               <div class="card stat"><div class="stat-head"><span>إجمالي المبيعات</span><span class="stat-icon">💰</span></div><h2>${totalSales.toLocaleString()} ج</h2><span class="change up">▲ ${totalSales?8:0}%</span></div>
@@ -1325,15 +1439,142 @@
         }
 
         // ================================================================
+        // PAGES MANAGEMENT
+        // ================================================================
+        function renderPages() {
+            if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك. هذه الصفحة للمدير فقط.</div></div>';
+
+            let html = allPages.map(p => {
+                const marketers = allMarketers.filter(m => m.pageId === p.id);
+                const csUsers = allUsers.filter(u => u.pageId === p.id && u.role === 'customer_service');
+                const orders = allOrders.filter(o => o.pageId === p.id);
+                const totalProfit = orders.reduce((s, o) => s + (o.profit || 0), 0);
+                return `
+                <div class="page-card">
+                    <div class="page-info">
+                        <h4>📄 ${p.name}</h4>
+                        <small>تم الإنشاء: ${p.createdAt?.toDate?.()?.toLocaleDateString('ar-EG') || '—'}</small>
+                        <div class="page-stats">
+                            <span>👤 مسوقين: <strong>${marketers.length}</strong></span>
+                            <span>🛎️ خدمة عملاء: <strong>${csUsers.length}</strong></span>
+                            <span>📋 طلبات: <strong>${orders.length}</strong></span>
+                            <span>💰 أرباح: <strong>${totalProfit.toLocaleString()} ج</strong></span>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-sm btn-primary" onclick="editPage('${p.id}')">✎</button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePage('${p.id}')">✕</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            return `
+            <div class="card panel">
+              <div class="panel-head"><div><h3>📄 إدارة الصفحات</h3><span class="muted">إنشاء وتعديل الصفحات، كل صفحة لها مسوقين وخدمة عملاء خاصين بها</span></div>
+                <button class="btn btn-primary btn-sm" onclick="showAddPage()">＋ صفحة جديدة</button>
+              </div>
+              ${html || '<div class="text-muted" style="padding:20px;text-align:center">لا توجد صفحات. قم بإضافة صفحة جديدة.</div>'}
+            </div>
+          `;
+        }
+
+        // ================================================================
+        // PAGE CRUD
+        // ================================================================
+        window.showAddPage = function() {
+            openModal('إنشاء صفحة جديدة', `
+            <form id="pageForm" onsubmit="return savePage(event)">
+              <div class="form-group"><label>اسم الصفحة *</label><input type="text" id="pageName" required placeholder="مثال: متجر الإلكترونيات" /></div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 حفظ</button>
+                <button type="button" class="btn" onclick="closeModal()">إلغاء</button>
+              </div>
+            </form>
+          `);
+        };
+
+        window.savePage = async function(e) {
+            e.preventDefault();
+            const name = $('pageName').value.trim();
+            if (!name) { toast('❌ اسم الصفحة مطلوب', 'danger'); return false; }
+            try {
+                await db.collection('pages').add({
+                    name: name,
+                    createdBy: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                toast('✅ تم إنشاء الصفحة');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) {
+                toast('❌ خطأ: ' + err.message, 'danger');
+                console.error('Save page error:', err);
+            }
+            return false;
+        };
+
+        window.editPage = function(id) {
+            const page = allPages.find(p => p.id === id);
+            if (!page) { toast('❌ الصفحة غير موجودة', 'danger'); return; }
+            openModal('تعديل الصفحة', `
+            <form id="pageForm" onsubmit="return updatePage('${id}', event)">
+              <div class="form-group"><label>اسم الصفحة *</label><input type="text" id="pageName" value="${page.name||''}" required /></div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 تحديث</button>
+                <button type="button" class="btn" onclick="closeModal()">إلغاء</button>
+              </div>
+            </form>
+          `);
+        };
+
+        window.updatePage = async function(id, e) {
+            e.preventDefault();
+            const name = $('pageName').value.trim();
+            if (!name) { toast('❌ اسم الصفحة مطلوب', 'danger'); return false; }
+            try {
+                await db.collection('pages').doc(id).update({ name });
+                toast('✅ تم تحديث الصفحة');
+                closeModal();
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            return false;
+        };
+
+        window.deletePage = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف هذه الصفحة؟ سيتم حذف جميع البيانات المرتبطة بها.')) return;
+            try {
+                const pageOrders = allOrders.filter(o => o.pageId === id);
+                for (const o of pageOrders) {
+                    await db.collection('orders').doc(o.id).delete();
+                }
+                const pageMarketers = allMarketers.filter(m => m.pageId === id);
+                for (const m of pageMarketers) {
+                    await db.collection('marketers').doc(m.id).delete();
+                }
+                const pageUsers = allUsers.filter(u => u.pageId === id);
+                for (const u of pageUsers) {
+                    await db.collection('users').doc(u.id).update({ pageId: null });
+                }
+                await db.collection('pages').doc(id).delete();
+                toast('✅ تم حذف الصفحة وجميع بياناتها');
+                renderCurrentPage();
+            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+        };
+
+        // ================================================================
         // USERS
         // ================================================================
         function renderUsers() {
             if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
+
             const roleNames = { admin: 'مدير', moderator: 'مشرف', marketer: 'مسوق', customer_service: 'خدمة عملاء' };
             const roleColors = { admin: 'role-admin', moderator: 'role-moderator', marketer: 'role-marketer',
                 customer_service: 'role-customer_service' };
+
             let html = allUsers.map(u => {
                 const isCurrent = u.id === currentUser.uid;
+                const page = allPages.find(p => p.id === u.pageId);
                 return `
                 <div class="user-card">
                     <div class="user-info">
@@ -1343,8 +1584,8 @@
                             <small>${u.email||'—'}</small>
                             <div style="margin-top:4px">
                                 <span class="role-badge ${roleColors[u.role] || 'role-marketer'}">${roleNames[u.role]||'مسوق'}</span>
+                                ${u.pageId ? `<span class="page-tag">📄 ${page?.name || 'صفحة غير معروفة'}</span>` : '<span class="text-muted" style="font-size:12px;">🚫 غير مخصص لصفحة</span>'}
                                 ${u.phone ? `<span class="text-muted" style="margin-right:8px">📱 ${u.phone}</span>` : ''}
-                                ${u.region ? `<span class="text-muted" style="margin-right:8px">📍 ${u.region}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1355,9 +1596,10 @@
                 </div>
                 `;
             }).join('');
+
             return `
             <div class="card panel">
-              <div class="panel-head"><div><h3>👥 إدارة الحسابات</h3><span class="muted">مدير، مشرف، مسوق، خدمة عملاء</span></div>
+              <div class="panel-head"><div><h3>👥 إدارة الحسابات</h3><span class="muted">تعيين المستخدمين للصفحات (مدير، مشرف، مسوق، خدمة عملاء)</span></div>
                 <button class="btn btn-primary btn-sm" onclick="showAddUser()">＋ حساب جديد</button>
               </div>
               ${html || '<div class="text-muted" style="padding:20px;text-align:center">لا يوجد مستخدمين</div>'}
@@ -1371,6 +1613,9 @@
         window.showAddUser = function() {
             const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
                 `<option value="${r}">${r}</option>`).join('');
+            const pageOpts = allPages.map(p =>
+                `<option value="${p.id}">${p.name}</option>`).join('');
+
             openModal('إنشاء حساب جديد', `
             <form id="userForm" onsubmit="return saveUser(event)">
               <div class="form-group"><label>الاسم *</label><input type="text" id="uName" required placeholder="الاسم الكامل" /></div>
@@ -1388,15 +1633,17 @@
                   <option value="customer_service">خدمة عملاء</option>
                 </select>
               </div>
+              <div class="form-group" id="pageSelectGroup">
+                <label>الصفحة التابع لها</label>
+                <select id="uPageId">
+                  <option value="">-- غير مخصص --</option>
+                  ${pageOpts}
+                </select>
+                <small style="color:var(--muted);font-size:12px;">اختر الصفحة التي سيعمل عليها هذا المستخدم (للمسوقين وخدمة العملاء)</small>
+              </div>
               <div class="form-group" id="profitRateGroup" style="display:none">
                 <label>نسبة الربح (%)</label>
                 <input type="number" id="uProfitRate" value="10" min="0" max="100" />
-              </div>
-              <div class="form-group" id="moderatorGroup" style="display:none">
-                <label>المشرف المسؤول</label>
-                <select id="uModerator"><option value="">لا يوجد</option>
-                  ${allUsers.filter(u=>u.role==='moderator').map(m=>`<option value="${m.id}">${m.name||m.email}</option>`).join('')}
-                </select>
               </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">💾 حفظ</button>
@@ -1404,13 +1651,18 @@
               </div>
             </form>
           `);
+
             const roleSelect = $('uRole');
             if (roleSelect) {
                 roleSelect.onchange = function() {
                     const isMarketer = this.value === 'marketer';
-                    const isModerator = this.value === 'moderator';
+                    const isCustomerService = this.value === 'customer_service';
+                    const isAdmin = this.value === 'admin' || this.value === 'moderator';
                     $('profitRateGroup').style.display = isMarketer ? 'block' : 'none';
-                    $('moderatorGroup').style.display = (isMarketer || isModerator) ? 'block' : 'none';
+                    $('pageSelectGroup').style.display = (isMarketer || isCustomerService) ? 'block' : 'none';
+                    if (isAdmin) {
+                        $('pageSelectGroup').style.display = 'none';
+                    }
                 };
                 roleSelect.onchange();
             }
@@ -1424,17 +1676,29 @@
             const phone = $('uPhone').value.trim() || '';
             const region = $('uRegion').value || '';
             const role = $('uRole').value;
+            const pageId = $('uPageId')?.value || '';
             const profitRate = parseFloat($('uProfitRate')?.value) || 10;
-            const moderatorId = $('uModerator')?.value || '';
 
             if (!name || !email || !password) { toast('❌ الاسم والبريد وكلمة المرور مطلوبة', 'danger'); return false; }
             if (password.length < 6) { toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'danger'); return false; }
 
+            if ((role === 'marketer' || role === 'customer_service') && !pageId) {
+                toast('❌ يرجى اختيار الصفحة التابع لها هذا المستخدم', 'danger');
+                return false;
+            }
+
             try {
                 const userCred = await auth.createUserWithEmailAndPassword(email, password);
                 const uid = userCred.user.uid;
-                const userData = { name, email, role, phone, region,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+                const userData = {
+                    name,
+                    email,
+                    role,
+                    phone,
+                    region,
+                    pageId: (role === 'marketer' || role === 'customer_service') ? pageId : null,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
                 await db.collection('users').doc(uid).set(userData);
 
                 if (role === 'marketer') {
@@ -1444,16 +1708,20 @@
                         email,
                         phone,
                         region,
+                        pageId: pageId,
                         profitRate,
                         totalProfit: 0,
-                        moderatorId: moderatorId || '',
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 }
-                toast(`✅ تم إنشاء حساب ${role === 'admin' ? 'مدير' : role === 'moderator' ? 'مشرف' : role === 'customer_service' ? 'خدمة عملاء' : 'مسوق'} بنجاح`);
+                const roleNames = { admin: 'مدير', moderator: 'مشرف', marketer: 'مسوق', customer_service: 'خدمة عملاء' };
+                toast(`✅ تم إنشاء حساب ${roleNames[role]||'مسوق'} بنجاح`);
                 closeModal();
                 renderCurrentPage();
-            } catch (err) { toast('❌ ' + err.message, 'danger'); }
+            } catch (err) {
+                toast('❌ ' + err.message, 'danger');
+                console.error('Save user error:', err);
+            }
             return false;
         };
 
@@ -1462,11 +1730,10 @@
             if (!user) { toast('❌ المستخدم غير موجود', 'danger'); return; }
             const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
                 `<option value="${r}" ${r===user.region?'selected':''}>${r}</option>`).join('');
+            const pageOpts = allPages.map(p =>
+                `<option value="${p.id}" ${p.id===user.pageId?'selected':''}>${p.name}</option>`).join('');
             const isMarketer = user.role === 'marketer';
             const marketer = allMarketers.find(m => m.id === id);
-            const modOpts = allUsers.filter(u => u.role === 'moderator' && u.id !== id)
-                .map(m => `<option value="${m.id}" ${marketer?.moderatorId===m.id?'selected':''}>${m.name||m.email}</option>`)
-                .join('');
 
             openModal('تعديل بيانات المستخدم', `
             <form id="userForm" onsubmit="return updateUser('${id}', event)">
@@ -1482,9 +1749,15 @@
                   <option value="marketer" ${user.role==='marketer'?'selected':''}>مسوق</option>
                   <option value="customer_service" ${user.role==='customer_service'?'selected':''}>خدمة عملاء</option>
               </select></div>
+              <div class="form-group">
+                <label>الصفحة التابع لها</label>
+                <select id="uPageId">
+                  <option value="">-- غير مخصص --</option>
+                  ${pageOpts}
+                </select>
+              </div>
               ${isMarketer ? `
                 <div class="form-group"><label>نسبة الربح (%)</label><input type="number" id="uProfitRate" value="${marketer?.profitRate||10}" min="0" max="100" /></div>
-                <div class="form-group"><label>المشرف المسؤول</label><select id="uModerator"><option value="">لا يوجد</option>${modOpts}</select></div>
                 <div class="form-group"><label>إجمالي الأرباح (ج)</label><input type="number" id="uTotalProfit" value="${marketer?.totalProfit||0}" disabled /></div>
               ` : ''}
               <div class="form-actions">
@@ -1500,21 +1773,26 @@
             const name = $('uName').value.trim();
             const phone = $('uPhone').value.trim() || '';
             const region = $('uRegion').value || '';
+            const pageId = $('uPageId')?.value || null;
             const profitRate = parseFloat($('uProfitRate')?.value);
-            const moderatorId = $('uModerator')?.value || '';
 
             if (!name) { toast('❌ الاسم مطلوب', 'danger'); return false; }
             try {
-                await db.collection('users').doc(id).update({ name, phone, region,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await db.collection('users').doc(id).update({
+                    name,
+                    phone,
+                    region,
+                    pageId: pageId,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 const user = allUsers.find(u => u.id === id);
                 if (user?.role === 'marketer') {
                     await db.collection('marketers').doc(id).update({
                         name,
                         phone,
                         region,
+                        pageId: pageId,
                         profitRate: profitRate || 10,
-                        moderatorId,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 }
@@ -1539,18 +1817,36 @@
         };
 
         // ================================================================
+        // showAddMarketer - FIXED
+        // ================================================================
+        window.showAddMarketer = function() {
+            showAddUser();
+            setTimeout(() => {
+                const role = $('uRole');
+                if (role) {
+                    role.value = 'marketer';
+                    role.onchange();
+                }
+            }, 200);
+        };
+
+        // ================================================================
         // MARKETERS
         // ================================================================
         function renderMarketers() {
             let list = [...allMarketers];
-            if (currentUserRole === 'moderator') {
-                list = list.filter(m => m.moderatorId === currentUser.uid);
-            }
-            if (currentUserRole === 'marketer') {
+            if (currentUserRole === 'admin') {
+                // Show all
+            } else if (currentUserRole === 'moderator') {
+                // Show all for now
+            } else if (currentUserPageId) {
+                list = list.filter(m => m.pageId === currentUserPageId);
+            } else {
                 return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
             }
+
             let rows = list.map(m => {
-                const mod = allUsers.find(u => u.id === m.moderatorId);
+                const page = allPages.find(p => p.id === m.pageId);
                 return `
                 <tr>
                   <td><div class="customer"><span class="avatar">${m.name?.[0]||'م'}</span>${m.name||'غير معروف'}</div></td>
@@ -1559,7 +1855,7 @@
                   <td>${m.region||'—'}</td>
                   <td>${m.profitRate||0}%</td>
                   <td>${(m.totalProfit||0).toLocaleString()} ج</td>
-                  <td>${mod?.name||'غير محدد'}</td>
+                  <td>${page?.name||'غير مخصص'}</td>
                   <td>
                     <button class="btn btn-sm btn-primary" onclick="editUser('${m.id}')">✎</button>
                     ${currentUserRole==='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteUser('${m.id}')">✕</button>`:''}
@@ -1570,28 +1866,18 @@
 
             return `
             <div class="card panel">
-              <div class="panel-head"><div><h3>👤 قائمة المسوقين</h3><span class="muted">${currentUserRole==='moderator'?'المسوقين التابعين لك':'جميع المسوقين'}</span></div>
-                ${currentUserRole==='admin'||currentUserRole==='moderator'?`<button class="btn btn-primary btn-sm" onclick="showAddMarketer()">＋ إضافة</button>`:''}
+              <div class="panel-head"><div><h3>👤 قائمة المسوقين</h3><span class="muted">${currentUserRole==='admin'?'جميع المسوقين':currentUserPageId?'مسوقين صفحتي':'المسوقين'}</span></div>
+                ${currentUserRole==='admin'||currentUserRole==='moderator'?`<button class="btn btn-primary btn-sm" onclick="showAddUser()">＋ إضافة</button>`:''}
               </div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المحافظة</th><th>نسبة الربح</th><th>إجمالي الأرباح</th><th>المشرف</th><th>إجراء</th></tr></thead>
+                  <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>المحافظة</th><th>نسبة الربح</th><th>إجمالي الأرباح</th><th>الصفحة</th><th>إجراء</th></tr></thead>
                   <tbody>${rows || '<tr><td colspan="8" class="text-muted">لا يوجد مسوقين</td></tr>'}</tbody>
                 </table>
               </div>
             </div>
           `;
         }
-
-        window.showAddMarketer = function() {
-            // Reuse user add with role pre-selected
-            showAddUser();
-            setTimeout(() => {
-                const role = $('uRole');
-                if (role) role.value = 'marketer';
-                if (role) role.onchange();
-            }, 200);
-        };
 
         // ================================================================
         // PRODUCTS
@@ -1614,7 +1900,7 @@
           `).join('');
             return `
             <div class="card panel">
-              <div class="panel-head"><div><h3>📦 قائمة المنتجات</h3><span class="muted">إدارة المنتجات والتسعير</span></div>
+              <div class="panel-head"><div><h3>📦 قائمة المنتجات</h3><span class="muted">منتجات مشتركة لجميع الصفحات</span></div>
                 <button class="btn btn-primary btn-sm" onclick="showAddProduct()">＋ إضافة</button>
               </div>
               <div class="table-wrap">
@@ -1745,17 +2031,9 @@
         // ORDERS
         // ================================================================
         function renderOrders() {
-            let filtered = [...allOrders];
-            if (currentUserRole === 'marketer') {
-                filtered = filtered.filter(o => o.marketerId === currentUser.uid);
-            } else if (currentUserRole === 'moderator') {
-                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid).map(m => m.id);
-                filtered = filtered.filter(o => myMarketers.includes(o.marketerId));
-            }
-            // customer_service sees all
+            let filtered = getFilteredOrders();
             filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-            // Filters
             const regionOpts = Object.keys(allSettings.regions || {}).map(r =>
                 `<option value="${r}">${r}</option>`).join('');
             const shipOpts = (allSettings.shippingTypes || []).map(s =>
@@ -1763,8 +2041,21 @@
             const statusOpts = ['جديد', 'قيد التجهيز', 'قيد الشحن', 'تم التسليم', 'ملغي', 'مرتجع']
                 .map(s => `<option value="${s}">${s}</option>`).join('');
 
+            let pageFilterHtml = '';
+            if (currentUserRole === 'admin') {
+                const pageOpts = allPages.map(p =>
+                    `<option value="${p.id}">${p.name}</option>`).join('');
+                pageFilterHtml = `
+                  <select class="btn btn-sm" id="filterPage" onchange="filterOrders()">
+                    <option value="">كل الصفحات</option>
+                    ${pageOpts}
+                  </select>
+                `;
+            }
+
             let rows = filtered.map(o => {
                 const m = allMarketers.find(x => x.id === o.marketerId);
+                const page = allPages.find(p => p.id === o.pageId);
                 return `
                 <tr>
                   <td>#${o.id.slice(0,8)}</td>
@@ -1776,16 +2067,21 @@
                   <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
                   <td>${(o.profit||0).toLocaleString()} ج</td>
                   <td>${m?.name||'—'}</td>
+                  <td>${page?.name||'—'}</td>
                   <td><button class="btn btn-sm btn-primary" onclick="viewOrder('${o.id}')">عرض</button></td>
                 </tr>
                 `;
             }).join('');
 
+            const pageLabel = currentUserPageId ? `صفحة: ${allPages.find(p=>p.id===currentUserPageId)?.name||'غير معروفة'}` :
+                'جميع الصفحات';
+
             return `
             <div class="card panel">
               <div class="panel-head">
-                <div><h3>📋 قائمة الطلبات</h3><span class="muted">${currentUserRole==='marketer'?'طلباتي':currentUserRole==='moderator'?'طلبات المسوقين التابعين':'جميع الطلبات'}</span></div>
+                <div><h3>📋 قائمة الطلبات</h3><span class="muted">${pageLabel}</span></div>
                 <div class="flex gap-1">
+                  ${pageFilterHtml}
                   <select class="btn btn-sm" id="filterRegion"><option value="">كل المحافظات</option>${regionOpts}</select>
                   <select class="btn btn-sm" id="filterShipping"><option value="">كل أنواع الشحن</option>${shipOpts}</select>
                   <select class="btn btn-sm" id="filterStatus"><option value="">كل الحالات</option>${statusOpts}</select>
@@ -1794,8 +2090,8 @@
               </div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>المحافظة</th><th>نوع الشحن</th><th>الحالة</th><th>الربح</th><th>المسوق</th><th>إجراء</th></tr></thead>
-                  <tbody>${rows || '<tr><td colspan="10" class="text-muted">لا توجد طلبات</td></tr>'}</tbody>
+                  <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>المحافظة</th><th>نوع الشحن</th><th>الحالة</th><th>الربح</th><th>المسوق</th><th>الصفحة</th><th>إجراء</th></tr></thead>
+                  <tbody>${rows || '<tr><td colspan="11" class="text-muted">لا توجد طلبات</td></tr>'}</tbody>
                 </table>
               </div>
             </div>
@@ -1815,12 +2111,12 @@
         }
 
         // ================================================================
-        // NEW ORDER FORM
+        // NEW ORDER
         // ================================================================
         function renderNewOrder() {
             return `
             <div class="card panel">
-              <div class="panel-head"><div><h3>➕ إضافة طلب جديد</h3><span class="muted">أدخل بيانات الطلب</span></div></div>
+              <div class="panel-head"><div><h3>➕ إضافة طلب جديد</h3><span class="muted">سيتم ربط الطلب بصفحتك الحالية</span></div></div>
               ${getOrderFormHTML()}
             </div>
           `;
@@ -1837,18 +2133,26 @@
             const statusOpts = ['جديد', 'قيد التجهيز', 'قيد الشحن', 'تم التسليم', 'ملغي', 'مرتجع']
                 .map(s => `<option value="${s}">${s}</option>`).join('');
 
-            // Marketers list for admin/moderator
             let marketerOpts = '';
             if (currentUserRole === 'admin') {
                 marketerOpts = allMarketers.map(m =>
-                    `<option value="${m.id}">${m.name||m.email}</option>`).join('');
+                    `<option value="${m.id}">${m.name||m.email} (${allPages.find(p=>p.id===m.pageId)?.name||'غير مخصص'})</option>`
+                ).join('');
             } else if (currentUserRole === 'moderator') {
-                const myMarketers = allMarketers.filter(m => m.moderatorId === currentUser.uid);
-                marketerOpts = myMarketers.map(m =>
+                marketerOpts = allMarketers.map(m =>
                     `<option value="${m.id}">${m.name||m.email}</option>`).join('');
+            } else {
+                marketerOpts =
+                    `<option value="${currentUser.uid}">أنا (${currentUser.email})</option>`;
             }
 
+            const pageName = currentUserPageId ? allPages.find(p => p.id === currentUserPageId)?.name || 'غير معروفة' :
+                'سيتم تحديدها تلقائياً';
+
             return `
+            <div style="margin-bottom:14px;font-size:13px;color:var(--muted);background:var(--bg);padding:10px 14px;border-radius:10px;">
+              📄 سيتم ربط هذا الطلب بالصفحة: <strong>${pageName}</strong>
+            </div>
             <form id="orderForm" onsubmit="return submitOrder(event)">
               <div class="form-row">
                 <div class="form-group"><label>اسم العميل *</label><input type="text" id="orderCustomer" required placeholder="أدخل اسم العميل" /></div>
@@ -1869,7 +2173,7 @@
               </div>
               <div class="form-group"><label>المسوق المسؤول</label>
                 <select id="orderMarketer">
-                  ${currentUserRole==='admin'||currentUserRole==='moderator' ? marketerOpts : `<option value="${currentUser.uid}">أنا (${currentUser.email})</option>`}
+                  ${marketerOpts}
                 </select>
               </div>
               <div class="form-group"><label>ملاحظات</label><textarea id="orderNotes" rows="2" placeholder="ملاحظات إضافية"></textarea></div>
@@ -1898,6 +2202,14 @@
             const marketerId = $('orderMarketer')?.value || currentUser.uid;
             const notes = $('orderNotes')?.value || '';
 
+            const marketer = allMarketers.find(m => m.id === marketerId);
+            const pageId = marketer?.pageId || currentUserPageId || null;
+
+            if (!pageId) {
+                toast('❌ المسوق غير مخصص لصفحة. يرجى تخصيص صفحة له أولاً.', 'danger');
+                return false;
+            }
+
             if (!customer || !productId || !region || !shipping) {
                 toast('❌ يرجى ملء جميع الحقول المطلوبة', 'danger');
                 return false;
@@ -1908,10 +2220,7 @@
 
             const sellPrice = product.sellPrice || 0;
             const costPrice = product.costPrice || 0;
-            const marketer = allMarketers.find(m => m.id === marketerId);
             const marketerRate = marketer?.profitRate || 10;
-
-            // Profit = (sell - cost) * qty * (marketerRate / 100)
             const profit = (sellPrice - costPrice) * qty * (marketerRate / 100);
 
             const orderData = {
@@ -1924,6 +2233,7 @@
                 shippingCost: shippingCost,
                 status: status,
                 marketerId: marketerId,
+                pageId: pageId,
                 notes: notes,
                 profit: profit,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1932,7 +2242,6 @@
 
             try {
                 await db.collection('orders').add(orderData);
-                // Update marketer total profit
                 await db.collection('marketers').doc(marketerId).update({
                     totalProfit: firebase.firestore.FieldValue.increment(profit)
                 });
@@ -1961,10 +2270,15 @@
             const o = allOrders.find(x => x.id === id);
             if (!o) { toast('❌ الطلب غير موجود', 'danger'); return; }
             const m = allMarketers.find(x => x.id === o.marketerId);
+            const page = allPages.find(p => p.id === o.pageId);
             const items = o.products?.map(it => {
                 const p = allProducts.find(pr => pr.id === it.productId);
                 return `${p?.name||'منتج'} × ${it.qty||1} = ${((it.price||0)*(it.qty||1)).toLocaleString()} ج`;
             }).join('<br>') || '—';
+
+            const canDelete = currentUserRole === 'admin' ||
+                (currentUserRole === 'moderator') ||
+                (currentUserRole === 'marketer' && o.marketerId === currentUser.uid);
 
             openModal(`تفاصيل الطلب #${id.slice(0,8)}`, `
             <div style="display:grid;gap:8px;font-size:14px">
@@ -1978,6 +2292,7 @@
               <div><strong>الحالة:</strong> <span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></div>
               <div><strong>الربح:</strong> ${(o.profit||0).toLocaleString()} ج</div>
               <div><strong>المسوق:</strong> ${m?.name||'غير معروف'}</div>
+              <div><strong>الصفحة:</strong> ${page?.name||'غير معروفة'}</div>
               <div><strong>ملاحظات:</strong> ${o.notes||'لا توجد'}</div>
               <hr style="border-color:var(--line)" />
               <div class="flex gap-1">
@@ -1985,7 +2300,7 @@
                   ${['جديد','قيد التجهيز','قيد الشحن','تم التسليم','ملغي','مرتجع'].map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}
                 </select>
                 <button class="btn btn-primary btn-sm" onclick="updateOrderStatus('${id}')">تحديث الحالة</button>
-                ${currentUserRole==='admin'||currentUserRole==='moderator'?`<button class="btn btn-danger btn-sm" onclick="deleteOrder('${id}')">حذف</button>`:''}
+                ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteOrder('${id}')">حذف</button>` : ''}
               </div>
             </div>
           `);
@@ -2010,7 +2325,6 @@
             try {
                 const o = allOrders.find(x => x.id === id);
                 if (o) {
-                    // Decrease marketer profit
                     await db.collection('marketers').doc(o.marketerId).update({
                         totalProfit: firebase.firestore.FieldValue.increment(-(o.profit || 0))
                     });
@@ -2158,20 +2472,23 @@
         };
 
         // ================================================================
-        // FILTER ORDERS (client-side)
+        // FILTER ORDERS
         // ================================================================
         window.filterOrders = function() {
+            const page = $('filterPage')?.value || '';
             const region = $('filterRegion')?.value || '';
             const shipping = $('filterShipping')?.value || '';
             const status = $('filterStatus')?.value || '';
             const rows = document.querySelectorAll('#pageContent table tbody tr');
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length < 10) return;
+                if (cells.length < 11) return;
+                const pageCell = cells[9]?.textContent || '';
                 const regionCell = cells[4]?.textContent || '';
                 const shippingCell = cells[5]?.textContent || '';
                 const statusCell = cells[6]?.textContent || '';
                 let show = true;
+                if (page && pageCell !== page) show = false;
                 if (region && regionCell !== region) show = false;
                 if (shipping && shippingCell !== shipping) show = false;
                 if (status && statusCell !== status) show = false;
@@ -2194,15 +2511,21 @@
                 allOrders = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 const uSnap = await db.collection('users').get();
                 allUsers = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                const pagesSnap = await db.collection('pages').get();
+                allPages = pagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                isDataLoaded = true;
                 renderCurrentPage();
-            } catch (err) { console.warn('Load data error:', err); }
+            } catch (err) {
+                console.warn('Load data error:', err);
+                isDataLoaded = true;
+                renderCurrentPage();
+            }
         }
 
         // ================================================================
         // BIND EVENTS
         // ================================================================
         function bindEvents() {
-            // Chart
             const chartCanvas = document.getElementById('dashChart');
             if (chartCanvas && currentTab === 'dashboard') {
                 if (window._dashChart) { window._dashChart.destroy(); }
@@ -2243,13 +2566,11 @@
                 });
             }
 
-            // Filters
-            ['filterRegion', 'filterShipping', 'filterStatus'].forEach(id => {
+            ['filterRegion', 'filterShipping', 'filterStatus', 'filterPage'].forEach(id => {
                 const el = $(id);
                 if (el) el.onchange = window.filterOrders;
             });
 
-            // Order form
             const orderForm = $('orderForm');
             if (orderForm) orderForm.onsubmit = window.submitOrder;
             const prodSel = $('orderProduct');
@@ -2298,8 +2619,13 @@
         window.deleteRegion = deleteRegion;
         window.showAddShippingType = showAddShippingType;
         window.saveShippingType = saveShippingType;
+        window.showAddPage = showAddPage;
+        window.savePage = savePage;
+        window.editPage = editPage;
+        window.updatePage = updatePage;
+        window.deletePage = deletePage;
 
-        console.log('🚀 MEDORA Professional ready with Firebase');
+        console.log('🚀 MEDORA Pages System ready with Firebase');
     </script>
 </body>
 </html>
