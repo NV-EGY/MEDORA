@@ -4463,40 +4463,36 @@ window.retryUnresolvedShipping = function(index) {
     }
 
     const item = items[index];
-    // إزالة العنصر من القائمة
-    items.splice(index, 1);
-    try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
-    unresolvedShippingItems = items;
-
-    // إضافة الصف إلى قائمة انتظار المراجعة (إذا لم يكن موجوداً بالفعل)
-    // نتأكد من عدم وجود مكرر في queue
+    // لا نحذف العنصر من القائمة الآن، بل نضيفه إلى قائمة المراجعة مع علامة fromUnresolved
     const trackingCode = String(item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim();
+    
+    // التأكد من عدم وجود الطلب بالفعل في قائمة المراجعة
     const alreadyInQueue = shippingImportQueue.some(row => (String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim() === trackingCode));
     if (!alreadyInQueue) {
-        shippingImportQueue.push(item.row);
+        // إضافة الصف إلى قائمة المراجعة مع علامة المصدر
+        const rowCopy = { ...item.row, fromUnresolved: true, unresolvedIndex: index };
+        shippingImportQueue.push(rowCopy);
+        toast('🔄 تم إضافة الطلب للمراجعة مرة أخرى');
     } else {
         toast('⚠️ هذا الطلب موجود بالفعل في قائمة المراجعة', 'warning');
-        // نستمر في التحديث
+        // مع ذلك، نستمر في المحاولة
     }
 
-    // بدء المراجعة (إذا لم تكن قيد التشغيل)
+    // بدء المراجعة إذا لم تكن قيد التشغيل
     if (!isShippingReviewRunning) {
         isShippingReviewRunning = true;
-        // نبدأ من العنصر الجديد (آخر عنصر)
         reviewNextShippingRow(shippingImportQueue.length - 1);
     } else {
-        // إذا كانت قيد التشغيل، نضبط المؤشر لمراجعة العنصر الجديد بعد الانتهاء
+        // إذا كانت قيد التشغيل، نضبط المؤشر لمراجعة العنصر الجديد
         // نوقف المراجعة الحالية ونبدأ من جديد
         isShippingReviewRunning = false;
-        // بعد إيقافها، نبدأ من جديد
         setTimeout(() => {
             isShippingReviewRunning = true;
             reviewNextShippingRow(shippingImportQueue.length - 1);
         }, 100);
     }
 
-    toast('🔄 تم إضافة الطلب للمراجعة مرة أخرى');
-    renderCurrentPage();
+    renderCurrentPage(); // تحديث الواجهة (لا يزال العنصر موجوداً)
 };
 
 function renderUnresolvedOrders() {
@@ -10149,7 +10145,6 @@ window.processShippingImport = function() {
 };
 
 // دالة المراجعة الأساسية
-// دالة المراجعة الأساسية (معدلة)
 function reviewNextShippingRow(index) {
     if (!isShippingReviewRunning) return;
 
@@ -10176,13 +10171,23 @@ function reviewNextShippingRow(index) {
         return;
     }
 
-    // ----- التحقق الجديد: إذا كان الطلب بحالة "جديد" -----
+    // ----- حالة خاصة: إذا كان الطلب من "غير مفهوم" وقد أصبح مسلّماً أو مرتجعاً بالفعل -----
+    if (row.fromUnresolved && (order.status === 'تسليم' || order.status === 'مرتجع')) {
+        // حذف العنصر من قائمة غير المفهوم
+        removeFromUnresolvedByTrackingCode(trackingCode);
+        shippingImportResults[index] = 'completed';
+        toast(`✅ الطلب ${order.orderCode} موجود مسبقاً وتمت إزالته من غير المفهوم`, 'success');
+        setTimeout(() => reviewNextShippingRow(index + 1), 200);
+        return;
+    }
+
+    // ----- التحقق من الطلبات الجديدة -----
     if (order.status === 'جديد') {
         showNewOrderAlert(index, row, order);
         return;
     }
 
-    // التحقق من المكررات (تسليم أو مرتجع أو غير مفهوم)
+    // ----- التحقق من المكررات (تسليم أو مرتجع أو غير مفهوم) -----
     let unresolvedCodes = [];
     try {
         const raw = sessionStorage.getItem('shipping_unresolved_items');
@@ -10193,17 +10198,29 @@ function reviewNextShippingRow(index) {
     } catch(e) {}
 
     if (order.status === 'تسليم' || order.status === 'مرتجع' || unresolvedCodes.includes(trackingCode)) {
+        // إذا كان الطلب من غير المفهوم وأصبح مسلّماً/مرتجعاً، نحذفه من غير المفهوم
+        if (row.fromUnresolved) {
+            removeFromUnresolvedByTrackingCode(trackingCode);
+            shippingImportResults[index] = 'completed';
+            toast(`✅ الطلب ${order.orderCode} تمت معالجته سابقاً وتمت إزالته من غير المفهوم`, 'success');
+            setTimeout(() => reviewNextShippingRow(index + 1), 200);
+            return;
+        }
         showExistingOrderAlert(index, row, order);
         return;
     }
 
-    // معالجة التسليم أو المرتجع
+    // ----- معالجة التسليم أو المرتجع -----
     if (orderStatus === 'تم التسليم ودفع كلى') {
         const excelDue = paid - shipping;
         const systemDue = (order.total || 0) - (order.baseShippingCost || order.shippingCost || 0);
         if (Math.abs(excelDue - systemDue) < 0.01) {
             applyShippingDelivery(order, row, excelDue);
             shippingImportResults[index] = 'completed';
+            // إذا كان من غير المفهوم، نحذفه من القائمة
+            if (row.fromUnresolved) {
+                removeFromUnresolvedByTrackingCode(trackingCode);
+            }
             toast(`✅ تم تسليم الطلب ${order.orderCode}`, 'success');
             setTimeout(() => reviewNextShippingRow(index + 1), 200);
         } else {
@@ -10212,8 +10229,25 @@ function reviewNextShippingRow(index) {
     } else {
         applyShippingReturn(order, row);
         shippingImportResults[index] = 'completed';
+        if (row.fromUnresolved) {
+            removeFromUnresolvedByTrackingCode(trackingCode);
+        }
         toast(`↩️ تم تحويل الطلب ${order.orderCode} إلى مرتجع`, 'warning');
         setTimeout(() => reviewNextShippingRow(index + 1), 200);
+    }
+}
+
+function removeFromUnresolvedByTrackingCode(trackingCode) {
+    if (!trackingCode) return;
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+    const newItems = items.filter(item => (item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim() !== trackingCode);
+    if (newItems.length !== items.length) {
+        try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(newItems)); } catch(e) {}
+        unresolvedShippingItems = newItems;
     }
 }
 
@@ -10473,7 +10507,6 @@ window.moveToUnresolved = function(index) {
     };
     items.push(item);
     try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
-    // مزامنة المتغير العام مع sessionStorage
     unresolvedShippingItems = items;
 
     shippingImportResults[index] = 'unresolved';
