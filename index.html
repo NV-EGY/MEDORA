@@ -1088,19 +1088,37 @@ body.dark-mode .printed-row:hover {
         // ================================================================
         // FIREBASE CONFIG
         // ================================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
-            authDomain: "medora-4d7ae.firebaseapp.com",
-            projectId: "medora-4d7ae",
-            storageBucket: "medora-4d7ae.firebasestorage.app",
-            messagingSenderId: "454112159901",
-            appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
-            measurementId: "G-KKPM4D930B"
-        };
+        // ================================================================
+// FIREBASE CONFIG
+// ================================================================
+const firebaseConfig = {
+    apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
+    authDomain: "medora-4d7ae.firebaseapp.com",
+    projectId: "medora-4d7ae",
+    storageBucket: "medora-4d7ae.firebasestorage.app",
+    messagingSenderId: "454112159901",
+    appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
+    measurementId: "G-KKPM4D930B"
+};
 
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ✅ تفعيل التخزين المحلي فوراً (مرة واحدة فقط)
+db.enablePersistence({ synchronizeTabs: true })
+    .then(() => {
+        console.log('✅ التخزين المحلي مفعّل بنجاح');
+    })
+    .catch((err) => {
+        if (err.code === 'failed-precondition') {
+            console.warn('⚠️ التخزين المحلي مفعّل بالفعل في تبويب آخر (سيتم استخدامه)');
+        } else if (err.code === 'unimplemented') {
+            console.warn('⚠️ المتصفح لا يدعم التخزين المحلي، سيتم العمل بدون كاش');
+        } else {
+            console.warn('⚠️ فشل تفعيل التخزين المحلي:', err);
+        }
+    });
         
 
         // ================================================================
@@ -1534,6 +1552,17 @@ sessionStorage.removeItem('tempPassword');
                     currentUserPageId = null;
                     currentUserData = { email: user.email, role: 'marketer', name: 'مسوق', pageId: null };
                 }
+                // بعد تأكد من وجود user
+try {
+    await db.enablePersistence({ synchronizeTabs: true });
+    console.log('✅ تم تفعيل التخزين المحلي بنجاح');
+} catch (err) {
+    if (err.code === 'failed-precondition') {
+        console.warn('⚠️ التخزين المحلي مفعّل بالفعل في تبويب آخر');
+    } else if (err.code === 'unimplemented') {
+        console.warn('⚠️ المتصفح لا يدعم التخزين المحلي');
+    }
+}
 
                 $('loginPage').style.display = 'none';
                 $('app').style.display = 'block';
@@ -1572,65 +1601,71 @@ sessionStorage.removeItem('tempPassword');
         // ================================================================
         // INIT APP
         // ================================================================
-        function initApp() {
+     function initApp() {
     buildNav();
+    // إزالة أي استدعاء لـ enablePersistence هنا لأنه تم تفعيله بالفعل في الأعلى
+    startListeners();
     loadAllData();
 
-    if (unsubOrders) unsubOrders();
-    if (unsubMarketers) unsubMarketers();
-    if (unsubProducts) unsubProducts();
-    if (unsubUsers) unsubUsers();
-    if (unsubSettings) unsubSettings();
-    if (unsubPages) unsubPages();
+    function startListeners() {
+        // إلغاء المستمعين السابقين إن وجدوا
+        if (unsubOrders) unsubOrders();
+        if (unsubMarketers) unsubMarketers();
+        if (unsubProducts) unsubProducts();
+        if (unsubUsers) unsubUsers();
+        if (unsubSettings) unsubSettings();
+        if (unsubPages) unsubPages();
 
-    unsubPages = db.collection('pages').onSnapshot(snap => {
-        allPages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (currentUserPageId) {
-            const page = allPages.find(p => p.id === currentUserPageId);
-            $('userPageDisplay').textContent = '📄 ' + (page?.name || 'صفحة غير معروفة');
-        }
-         if (currentUserRole === 'customer_service' && currentTab === 'dashboard') {
-        currentTab = 'orders';
+        unsubPages = db.collection('pages').onSnapshot(snap => {
+            allPages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (currentUserPageId) {
+                const page = allPages.find(p => p.id === currentUserPageId);
+                document.getElementById('userPageDisplay').textContent = '📄 ' + (page?.name || 'صفحة غير معروفة');
+            }
+            if (currentUserRole === 'customer_service' && currentTab === 'dashboard') {
+                currentTab = 'orders';
+            }
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Pages listener error:', err);
+        });
+
+        unsubOrders = db.collection('orders').onSnapshot(snap => {
+            allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Orders listener error:', err);
+        });
+
+        // باقي المستمعين بنفس الطريقة...
+        unsubMarketers = db.collection('marketers').onSnapshot(snap => {
+            allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Marketers error:', err);
+        });
+
+        unsubProducts = db.collection('products').onSnapshot(snap => {
+            allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Products error:', err);
+        });
+
+        unsubUsers = db.collection('users').onSnapshot(snap => {
+            allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Users error:', err);
+        });
+
+        unsubSettings = db.collection('settings').doc('general').onSnapshot(doc => {
+            if (doc.exists) allSettings = doc.data();
+            if (isDataLoaded && !_suppressRender) renderCurrentPage();
+        }, err => {
+            console.warn('Settings error:', err);
+        });
     }
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Pages error:', err);
-    });
-
-    unsubOrders = db.collection('orders').onSnapshot(snap => {
-        allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Orders error:', err);
-    });
-
-    unsubMarketers = db.collection('marketers').onSnapshot(snap => {
-        allMarketers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Marketers error:', err);
-    });
-
-    unsubProducts = db.collection('products').onSnapshot(snap => {
-        allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Products error:', err);
-    });
-
-    unsubUsers = db.collection('users').onSnapshot(snap => {
-        allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Users error:', err);
-    });
-
-    unsubSettings = db.collection('settings').doc('general').onSnapshot(doc => {
-        if (doc.exists) allSettings = doc.data();
-        if (isDataLoaded && !_suppressRender) renderCurrentPage(); // <-- إضافة !_suppressRender
-    }, err => {
-        console.warn('Settings error:', err);
-    });
 
     setupSidebarClose();
 }
@@ -9327,65 +9362,86 @@ function updateSelectedCount() {
 // ================================================================
 async function loadAllData() {
     try {
-        console.log('🔄 جاري تحميل البيانات من Firebase...');
-        
-        const settingsDoc = await db.collection('settings').doc('general').get();
-        if (settingsDoc.exists) {
-            allSettings = settingsDoc.data();
-            if (settingsDoc.data().governorateCities) {
-                Object.assign(GOVERNORATE_CITIES, settingsDoc.data().governorateCities);
+        console.log('🔄 جاري تحميل البيانات... (من الكاش أولاً)');
+
+        // محاولة تحميل البيانات من الخادم مع إعادة محاولة تلقائية
+        const fetchWithRetry = async (ref, retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    return await ref.get();
+                } catch (err) {
+                    if (i === retries - 1) throw err;
+                    console.warn(`⚠️ محاولة ${i+1} فشلت، إعادة المحاولة...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
             }
-            if (settingsDoc.data().governorateClassification) {
-                Object.assign(GOVERNORATE_CLASSIFICATION, settingsDoc.data().governorateClassification);
+        };
+
+        // تحميل جميع المجموعات بالتوازي (مع إعادة محاولة في حال الفشل)
+        const [settingsSnap, marketersSnap, productsSnap, ordersSnap, usersSnap, pagesSnap, settleSnap] = await Promise.all([
+            fetchWithRetry(db.collection('settings').doc('general')).catch(() => null),
+            fetchWithRetry(db.collection('marketers')).catch(() => null),
+            fetchWithRetry(db.collection('products')).catch(() => null),
+            fetchWithRetry(db.collection('orders')).catch(() => null),
+            fetchWithRetry(db.collection('users')).catch(() => null),
+            fetchWithRetry(db.collection('pages')).catch(() => null),
+            fetchWithRetry(db.collection('settlements')).catch(() => null)
+        ]);
+
+        // تحديث المتغيرات العامة (مع الحفاظ على البيانات السابقة إذا فشل تحميل بعضها)
+        if (settingsSnap && settingsSnap.exists) {
+            allSettings = settingsSnap.data();
+            if (settingsSnap.data().governorateCities) {
+                Object.assign(GOVERNORATE_CITIES, settingsSnap.data().governorateCities);
             }
-           if (settingsDoc.data().customShippingCosts) {
-    customShippingCosts = settingsDoc.data().customShippingCosts;
-}
+            if (settingsSnap.data().governorateClassification) {
+                Object.assign(GOVERNORATE_CLASSIFICATION, settingsSnap.data().governorateClassification);
+            }
+            if (settingsSnap.data().customShippingCosts) {
+                customShippingCosts = settingsSnap.data().customShippingCosts;
+            }
         }
 
-        // تحميل الأسعار المخصصة من Firestore عند بدء التطبيق
-async function loadShippingPrices() {
-    try {
-        const doc = await db.collection('settings').doc('general').get();
-        if (doc.exists && doc.data().customShippingCosts) {
-            customShippingCosts = doc.data().customShippingCosts;
-        }
-    } catch (e) {
-        console.warn('⚠️ فشل تحميل أسعار الشحن:', e);
-    }
-}
-        
-        const mSnap = await db.collection('marketers').get();
-        allMarketers = mSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        const pSnap = await db.collection('products').get();
-        allProducts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        const oSnap = await db.collection('orders').get();
-        allOrders = oSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        console.log(`✅ تم تحميل ${allOrders.length} طلب`);
-        
-        const uSnap = await db.collection('users').get();
-        allUsers = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        const pagesSnap = await db.collection('pages').get();
-        allPages = pagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        const settleSnap = await db.collection('settlements').get();
-        allSettlements = settleSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (marketersSnap) allMarketers = marketersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (productsSnap) allProducts = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (ordersSnap) allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (usersSnap) allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (pagesSnap) allPages = pagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (settleSnap) allSettlements = settleSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // ⚠️ تم تعليق الحذف النهائي مؤقتاً لتجنب أي تأثير على التحميل
-        // await permanentDeleteExpiredOrders();
+        // التأكد من وجود بيانات على الأقل (حتى لو كانت من الكاش)
+        if (allOrders.length === 0 && allPages.length === 0) {
+            // لا توجد بيانات، نعرض رسالة
+            document.getElementById('pageContent').innerHTML = `
+                <div class="card panel" style="text-align:center;padding:40px;">
+                    <h3>⏳ جاري تحميل البيانات...</h3>
+                    <p class="text-muted">قد يستغرق بعض الوقت في أول تشغيل</p>
+                    <button class="btn btn-primary" onclick="refreshData()">🔄 إعادة المحاولة</button>
+                </div>
+            `;
+        }
 
         isDataLoaded = true;
         renderCurrentPage();
-        console.log('✅ تم تحميل جميع البيانات بنجاح');
+        console.log(`✅ تم تحميل البيانات: ${allOrders.length} طلب، ${allPages.length} صفحة`);
+        toast('✅ تم تحديث البيانات', 'success');
     } catch (err) {
-        console.warn('⚠️ خطأ في تحميل البيانات:', err);
-        // حتى في حالة الخطأ، نعرض الواجهة ونحاول العمل بالبيانات المتوفرة
-        isDataLoaded = true;
-        renderCurrentPage();
-        toast('⚠️ حدث خطأ في تحميل البيانات، تم عرض البيانات المتوفرة', 'warning');
+        console.warn('⚠️ خطأ في تحميل البيانات (قد تكون البيانات من الكاش):', err);
+        // إذا كانت البيانات موجودة مسبقاً (من جلسة سابقة) نعرضها
+        if (allOrders.length || allPages.length) {
+            isDataLoaded = true;
+            renderCurrentPage();
+            toast('⚠️ تم عرض البيانات المخزنة محلياً، جاري محاولة التحديث...', 'warning');
+        } else {
+            // لا توجد بيانات، نعرض رسالة خطأ
+            document.getElementById('pageContent').innerHTML = `
+                <div class="card panel" style="text-align:center;padding:40px;">
+                    <h3>⚠️ تعذر تحميل البيانات</h3>
+                    <p class="text-muted">يرجى التحقق من اتصالك بالإنترنت وإعادة تحميل الصفحة.</p>
+                    <button class="btn btn-primary" onclick="refreshData()">🔄 إعادة المحاولة</button>
+                </div>
+            `;
+        }
     }
 }
 
