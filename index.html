@@ -4402,18 +4402,126 @@ function renderOrderLog() {
 }
 
 function renderUnresolvedOrders() {
-    // استرجاع العناصر غير المفهومة من sessionStorage
+    // المصدر الوحيد هو sessionStorage
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+
+    // مزامنة المتغير العام مع sessionStorage (لكن نجعله مرجعاً واحداً)
+    unresolvedShippingItems = items;
+
+    if (!items.length) {
+        return '<div class="text-muted" style="padding:20px;">لا توجد طلبات غير مفهومة</div>';
+    }
+
+    const rows = items.map((item, idx) => {
+        const r = item.row;
+        return `
+        <tr>
+            <td>${idx + 1}</td>
+            <td>${r['رقم الشحنة'] || r['رقم الشحنه'] || '—'}</td>
+            <td>${r['المرسل اليه'] || '—'}</td>
+            <td>${r['المحافظة'] || '—'}</td>
+            <td>${r['المدفوع'] || 0}</td>
+            <td>${r['الشحن'] || 0}</td>
+            <td>${r['حالة الأوردر'] || '—'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="retryUnresolvedShipping(${idx})">🔄 إعادة المراجعة</button>
+                <button class="btn btn-sm btn-danger" onclick="removeUnresolvedItem(${idx})">✕ حذف</button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+
+    return `
+        <div style="margin-bottom:12px;">
+            <span class="text-muted">هذه الطلبات لم نتمكن من معالجتها أثناء الاستيراد. يمكنك إعادة مراجعتها أو حذفها.</span>
+            <button class="btn btn-sm btn-danger" onclick="clearAllUnresolved()" style="margin-right:10px;">🗑️ مسح الكل</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>#</th><th>رقم الشحنة</th><th>العميل</th><th>المحافظة</th><th>المدفوع</th><th>الشحن</th><th>الحالة</th><th>إجراء</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+window.retryUnresolvedShipping = function(index) {
+    // الحصول على القائمة من sessionStorage
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+
+    if (!items[index]) {
+        toast('❌ العنصر غير موجود', 'danger');
+        return;
+    }
+
+    const item = items[index];
+    // إزالة العنصر من القائمة
+    items.splice(index, 1);
+    try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
+    unresolvedShippingItems = items;
+
+    // إضافة الصف إلى قائمة انتظار المراجعة (إذا لم يكن موجوداً بالفعل)
+    // نتأكد من عدم وجود مكرر في queue
+    const trackingCode = String(item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim();
+    const alreadyInQueue = shippingImportQueue.some(row => (String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim() === trackingCode));
+    if (!alreadyInQueue) {
+        shippingImportQueue.push(item.row);
+    } else {
+        toast('⚠️ هذا الطلب موجود بالفعل في قائمة المراجعة', 'warning');
+        // نستمر في التحديث
+    }
+
+    // بدء المراجعة (إذا لم تكن قيد التشغيل)
+    if (!isShippingReviewRunning) {
+        isShippingReviewRunning = true;
+        // نبدأ من العنصر الجديد (آخر عنصر)
+        reviewNextShippingRow(shippingImportQueue.length - 1);
+    } else {
+        // إذا كانت قيد التشغيل، نضبط المؤشر لمراجعة العنصر الجديد بعد الانتهاء
+        // نوقف المراجعة الحالية ونبدأ من جديد
+        isShippingReviewRunning = false;
+        // بعد إيقافها، نبدأ من جديد
+        setTimeout(() => {
+            isShippingReviewRunning = true;
+            reviewNextShippingRow(shippingImportQueue.length - 1);
+        }, 100);
+    }
+
+    toast('🔄 تم إضافة الطلب للمراجعة مرة أخرى');
+    renderCurrentPage();
+};
+
+function renderUnresolvedOrders() {
+    // استرجاع العناصر غير المفهومة من sessionStorage (المصدر الوحيد)
     let items = [];
     try {
         const raw = sessionStorage.getItem('shipping_unresolved_items');
         if (raw) items = JSON.parse(raw);
     } catch(e) {}
     
-    // نضيف أيضاً أي عناصر في الذاكرة لم تُحفظ بعد
+    // نضيف أيضاً أي عناصر في الذاكرة (للتزامن) – لكن الأفضل الاعتماد على sessionStorage فقط
+    // ندمج مع unresolvedShippingItems لتجنب فقدان البيانات أثناء الجلسة
     if (unresolvedShippingItems.length > 0) {
-        items = items.concat(unresolvedShippingItems);
-        // حفظ للتحديث
+        // دمج مع تجنب التكرار (باستخدام معرف فريد)
+        const existingIds = new Set(items.map(item => item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || ''));
+        for (const item of unresolvedShippingItems) {
+            const id = item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '';
+            if (!existingIds.has(id)) {
+                items.push(item);
+                existingIds.add(id);
+            }
+        }
+        // حفظ المدمج في sessionStorage
         try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
+        unresolvedShippingItems = items; // مزامنة
     }
 
     if (!items.length) {
@@ -4432,7 +4540,7 @@ function renderUnresolvedOrders() {
             <td>${r['الشحن'] || 0}</td>
             <td>${r['حالة الأوردر'] || '—'}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="retryUnresolvedShipping(${idx})">🔄 إعادة المحاولة</button>
+                <button class="btn btn-sm btn-primary" onclick="retryUnresolvedShipping(${idx})">🔄 إعادة المراجعة</button>
                 <button class="btn btn-sm btn-danger" onclick="removeUnresolvedItem(${idx})">✕ حذف</button>
             </td>
         </tr>
@@ -4441,7 +4549,7 @@ function renderUnresolvedOrders() {
 
     return `
         <div style="margin-bottom:12px;">
-            <span class="text-muted">هذه الطلبات لم نتمكن من معالجتها أثناء الاستيراد (رقم شحنة غير مطابق أو مستحق غير متطابق). يمكنك إعادة محاولتها يدوياً.</span>
+            <span class="text-muted">هذه الطلبات لم نتمكن من معالجتها أثناء الاستيراد. يمكنك إعادة مراجعتها أو حذفها.</span>
             <button class="btn btn-sm btn-danger" onclick="clearAllUnresolved()" style="margin-right:10px;">🗑️ مسح الكل</button>
         </div>
         <div class="table-wrap">
@@ -4453,41 +4561,119 @@ function renderUnresolvedOrders() {
     `;
 }
 
-window.retryUnresolvedShipping = function(index) {
-    const items = JSON.parse(sessionStorage.getItem('shipping_unresolved_items') || '[]');
-    if (!items[index]) { toast('❌ العنصر غير موجود', 'danger'); return; }
+window.removeUnresolvedItem = async function(index) {
+    if (!confirm('حذف هذا العنصر من قائمة غير المفهوم؟ سيتم نقل الطلب إلى سلة المحذوفات.')) return;
+
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+
+    if (!items[index]) {
+        toast('❌ العنصر غير موجود', 'danger');
+        return;
+    }
+
     const item = items[index];
-    // حذفه من غير المفهوم
+    const trackingCode = String(item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim();
+
+    // البحث عن الطلب في allOrders
+    const order = allOrders.find(o => o.orderCode === trackingCode);
+    if (order) {
+        try {
+            // استخدام batch لتحديث الطلب
+            await db.collection('orders').doc(order.id).update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                deletedBy: currentUser.uid,
+                originalStatus: order.status || 'جديد',
+                status: 'محذوف',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // تحديث الكائن المحلي
+            Object.assign(order, {
+                isDeleted: true,
+                deletedAt: new Date(),
+                deletedBy: currentUser.uid,
+                originalStatus: order.status || 'جديد',
+                status: 'محذوف'
+            });
+            toast('✅ تم نقل الطلب إلى سلة المحذوفات');
+        } catch (err) {
+            toast('❌ فشل نقل الطلب إلى المحذوفات: ' + err.message, 'danger');
+            return;
+        }
+    } else {
+        toast('⚠️ لم يتم العثور على الطلب في النظام، سيتم حذفه من قائمة غير المفهوم فقط', 'warning');
+    }
+
+    // حذف العنصر من القائمة
     items.splice(index, 1);
-    sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items));
-    // إضافته إلى قائمة الانتظار للمراجعة
-    shippingImportQueue.push(item.row);
-    toast('🔄 تم إضافة الطلب للمراجعة مرة أخرى');
+    try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
+    unresolvedShippingItems = items;
     renderCurrentPage();
-    // بدء المراجعة إذا لم تكن قيد التشغيل
-    if (!isShippingReviewRunning) {
-        isShippingReviewRunning = true;
-        reviewNextShippingRow(shippingImportQueue.length - 1);
-    }
 };
 
-window.removeUnresolvedItem = function(index) {
-    if (!confirm('حذف هذا العنصر من قائمة غير المفهوم؟')) return;
-    const items = JSON.parse(sessionStorage.getItem('shipping_unresolved_items') || '[]');
-    if (items[index]) {
-        items.splice(index, 1);
-        sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items));
-        renderCurrentPage();
-        toast('✅ تم الحذف');
-    }
-};
+window.clearAllUnresolved = async function() {
+    if (!confirm('مسح جميع العناصر غير المفهومة؟ سيتم نقل الطلبات الموجودة إلى سلة المحذوفات.')) return;
 
-window.clearAllUnresolved = function() {
-    if (!confirm('مسح جميع العناصر غير المفهومة؟')) return;
-    sessionStorage.removeItem('shipping_unresolved_items');
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+
+    if (!items.length) {
+        toast('⚠️ لا توجد عناصر', 'warning');
+        return;
+    }
+
+    // استخدام batch واحد لتحديث جميع الطلبات دفعة واحدة
+    const batch = db.batch();
+    let movedCount = 0;
+    const orderRefs = [];
+
+    for (const item of items) {
+        const trackingCode = String(item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim();
+        const order = allOrders.find(o => o.orderCode === trackingCode);
+        if (order) {
+            const ref = db.collection('orders').doc(order.id);
+            batch.update(ref, {
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                deletedBy: currentUser.uid,
+                originalStatus: order.status || 'جديد',
+                status: 'محذوف',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            // تحديث الكائن المحلي (للتحديث الفوري)
+            Object.assign(order, {
+                isDeleted: true,
+                deletedAt: new Date(),
+                deletedBy: currentUser.uid,
+                originalStatus: order.status || 'جديد',
+                status: 'محذوف'
+            });
+            orderRefs.push(ref);
+            movedCount++;
+        }
+    }
+
+    if (orderRefs.length > 0) {
+        try {
+            await batch.commit();
+            toast(`✅ تم نقل ${movedCount} طلب إلى المحذوفات`);
+        } catch (err) {
+            toast('❌ فشل تحديث الطلبات: ' + err.message, 'danger');
+            return;
+        }
+    }
+
+    // مسح القائمة بغض النظر عن النتيجة
+    try { sessionStorage.removeItem('shipping_unresolved_items'); } catch(e) {}
     unresolvedShippingItems = [];
     renderCurrentPage();
-    toast('✅ تم المسح');
 };
 
 // ================================================================
@@ -10048,7 +10234,6 @@ function showExistingOrderAlert(index, row, order) {
             <div style="margin-top:6px;color:var(--muted);font-size:12px;">📌 طلب من الإكسل: ${row['المرسل اليه'] || '—'} | ${row['المحافظة'] || '—'}</div>
         </div>
         <div class="form-actions">
-            <button class="btn btn-warning" onclick="skipShippingRow(${index})">⏭ تخطي هذا الطلب</button>
             <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
         </div>
     `;
@@ -10138,9 +10323,7 @@ function showNewOrderAlert(index, row, order) {
             <div style="margin-top:6px;color:var(--muted);font-size:12px;">📌 طلب من الإكسل: ${row['المرسل اليه'] || '—'} | ${row['المحافظة'] || '—'}</div>
         </div>
         <div class="form-actions">
-            <button class="btn btn-warning" onclick="skipShippingRow(${index})">⏭ تخطي هذا الطلب</button>
             <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
-            <button class="btn btn-success" onclick="forceShippingRow(${index})">✔ تأكيد التسليم (تجاوز الحالة)</button>
         </div>
     `;
     window._shippingErrorContext = { index, row, order, errorType: 'new_order' };
@@ -10200,12 +10383,10 @@ function showShippingErrorModal(index, errorType, row, order, excelDue, systemDu
             </div>
             <div class="form-actions">
                 <button class="btn btn-primary" onclick="retryShippingWithNewCode(${index})">🔄 إعادة المحاولة بالكود الجديد</button>
-                <button class="btn btn-warning" onclick="skipShippingRow(${index})">⏭ تخطي</button>
                 <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
             </div>
         `;
     } else if (errorType === 'amount_mismatch') {
-        // استخدام baseShippingCost لحساب المستحق في النظام
         const systemDueCorrect = (order.total || 0) - (order.baseShippingCost || order.shippingCost || 0);
         html = `
             <div style="background:#fff4e5;border:1px solid var(--warning);padding:14px;border-radius:10px;margin-bottom:16px;">
@@ -10225,14 +10406,11 @@ function showShippingErrorModal(index, errorType, row, order, excelDue, systemDu
             <div class="form-actions">
                 <button class="btn btn-success" onclick="confirmShippingWithOverride(${index}, '${order.id}')">✔ تأكيد التسليم (بالمستحق المعدل)</button>
                 <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
-                <button class="btn btn-warning" onclick="skipShippingRow(${index})">⏭ تخطي</button>
             </div>
         `;
     }
 
-    // تخزين البيانات في متغيرات عمومية للرجوع إليها
     window._shippingErrorContext = { index, row, order, errorType, excelDue, systemDue };
-
     openModal('⚠️ توقف المراجعة - مطلوب تدخل', html);
 }
 
@@ -10264,18 +10442,39 @@ window.skipShippingRow = function(index) {
 
 window.moveToUnresolved = function(index) {
     const row = shippingImportQueue[index];
-    // حفظ في قائمة غير المفهومة (سنعرضها في تبويب منفصل)
-    // نستخدم sessionStorage مؤقتاً، أو نضيفها إلى مصفوفة
+    const trackingCode = String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim();
+    if (!trackingCode) {
+        toast('⚠️ رقم الشحنة غير موجود، لا يمكن نقله', 'danger');
+        return;
+    }
+
+    // جلب القائمة الحالية من sessionStorage
+    let items = [];
+    try {
+        const raw = sessionStorage.getItem('shipping_unresolved_items');
+        if (raw) items = JSON.parse(raw);
+    } catch(e) {}
+
+    // التحقق من عدم وجود نفس العنصر مسبقاً (حسب رقم الشحنة)
+    const exists = items.some(item => (item.row['رقم الشحنة'] || item.row['رقم الشحنه'] || '').trim() === trackingCode);
+    if (exists) {
+        toast('⚠️ هذا الطلب موجود بالفعل في قائمة غير المفهوم', 'warning');
+        // مع ذلك، نعتبره غير مفهوم وننهي المراجعة لهذا العنصر
+        shippingImportResults[index] = 'unresolved';
+        closeModal();
+        reviewNextShippingRow(index + 1);
+        return;
+    }
+
     const item = {
         row: row,
         index: index,
         movedAt: new Date().toISOString()
     };
-    unresolvedShippingItems.push(item);
-    // حفظ في sessionStorage
-    try {
-        sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(unresolvedShippingItems));
-    } catch(e) {}
+    items.push(item);
+    try { sessionStorage.setItem('shipping_unresolved_items', JSON.stringify(items)); } catch(e) {}
+    // مزامنة المتغير العام مع sessionStorage
+    unresolvedShippingItems = items;
 
     shippingImportResults[index] = 'unresolved';
     closeModal();
