@@ -10170,7 +10170,6 @@ function reviewNextShippingRow(index) {
 
     if (index >= shippingImportQueue.length) {
         isShippingReviewRunning = false;
-        const total = shippingImportQueue.length;
         const done = Object.values(shippingImportResults).filter(v => v === 'completed').length;
         const skipped = Object.values(shippingImportResults).filter(v => v === 'skipped').length;
         const unresolved = Object.values(shippingImportResults).filter(v => v === 'unresolved').length;
@@ -10184,6 +10183,7 @@ function reviewNextShippingRow(index) {
     const orderStatus = String(row['حالة الأوردر'] || '').trim();
     const paid = parseFloat(row['المدفوع']) || 0;
     const shipping = parseFloat(row['الشحن']) || 0;
+    const isFromUnresolved = row.fromUnresolved === true;
 
     const order = allOrders.find(o => o.orderCode === trackingCode);
     if (!order) {
@@ -10191,57 +10191,52 @@ function reviewNextShippingRow(index) {
         return;
     }
 
-    // ----- حالة خاصة: إذا كان الطلب من "غير مفهوم" وقد أصبح مسلّماً أو مرتجعاً بالفعل -----
-    if (row.fromUnresolved && (order.status === 'تسليم' || order.status === 'مرتجع')) {
-        // حذف العنصر من قائمة غير المفهوم
+    // ✅ 1) لو الطلب جاي من "غير مفهوم" واتحلّ بالفعل (تسليم/مرتجع/محذوف)
+    //    → نشيله من غير مفهوم ونكمل
+    if (isFromUnresolved && (order.status === 'تسليم' || order.status === 'مرتجع' || order.isDeleted === true)) {
         removeFromUnresolvedByTrackingCode(trackingCode);
         shippingImportResults[index] = 'completed';
-        toast(`✅ الطلب ${order.orderCode} موجود مسبقاً وتمت إزالته من غير المفهوم`, 'success');
+        toast(`✅ الطلب ${order.orderCode} تمت معالجته مسبقاً وتمت إزالته من غير المفهوم`, 'success');
         setTimeout(() => reviewNextShippingRow(index + 1), 200);
         return;
     }
 
-    // ----- التحقق من الطلبات الجديدة -----
-    if (order.status === 'جديد') {
+    // ✅ 2) فحص الطلبات الجديدة - بس لو مش جاي من غير مفهوم
+    if (!isFromUnresolved && order.status === 'جديد') {
         showNewOrderAlert(index, row, order);
         return;
     }
 
-    // ----- التحقق من المكررات (تسليم أو مرتجع أو غير مفهوم) -----
-    let unresolvedCodes = [];
-    try {
-        const raw = sessionStorage.getItem('shipping_unresolved_items');
-        if (raw) {
-            const items = JSON.parse(raw);
-            unresolvedCodes = items.map(item => String(item.row['رقم الشحنة'] || '').trim());
-        }
-    } catch(e) {}
+    // ✅ 3) فحص الطلبات الموجودة مسبقاً - بس لو مش جاي من غير مفهوم
+    if (!isFromUnresolved) {
+        let unresolvedCodes = [];
+        try {
+            const raw = sessionStorage.getItem('shipping_unresolved_items');
+            if (raw) {
+                const items = JSON.parse(raw);
+                unresolvedCodes = items.map(item => String(item.row['رقم الشحنة'] || '').trim());
+            }
+        } catch(e) {}
 
-    if (order.status === 'تسليم' || order.status === 'مرتجع' || unresolvedCodes.includes(trackingCode)) {
-        // إذا كان الطلب من غير المفهوم وأصبح مسلّماً/مرتجعاً، نحذفه من غير المفهوم
-        if (row.fromUnresolved) {
-            removeFromUnresolvedByTrackingCode(trackingCode);
-            shippingImportResults[index] = 'completed';
-            toast(`✅ الطلب ${order.orderCode} تمت معالجته سابقاً وتمت إزالته من غير المفهوم`, 'success');
-            setTimeout(() => reviewNextShippingRow(index + 1), 200);
+        if (order.status === 'تسليم' || order.status === 'مرتجع' || unresolvedCodes.includes(trackingCode)) {
+            showExistingOrderAlert(index, row, order);
             return;
         }
-        showExistingOrderAlert(index, row, order);
-        return;
     }
 
-    // ----- معالجة التسليم أو المرتجع -----
+    // ✅ 4) المعالجة الفعلية: تسليم أو مرتجع
     if (orderStatus === 'تم التسليم ودفع كلى') {
         const excelDue = paid - shipping;
         const systemDue = (order.total || 0) - (order.baseShippingCost || order.shippingCost || 0);
         if (Math.abs(excelDue - systemDue) < 0.01) {
             applyShippingDelivery(order, row, excelDue);
             shippingImportResults[index] = 'completed';
-            // إذا كان من غير المفهوم، نحذفه من القائمة
-            if (row.fromUnresolved) {
+            if (isFromUnresolved) {
                 removeFromUnresolvedByTrackingCode(trackingCode);
+                toast(`✅ تم تسليم الطلب ${order.orderCode} وإزالته من غير المفهوم`, 'success');
+            } else {
+                toast(`✅ تم تسليم الطلب ${order.orderCode}`, 'success');
             }
-            toast(`✅ تم تسليم الطلب ${order.orderCode}`, 'success');
             setTimeout(() => reviewNextShippingRow(index + 1), 200);
         } else {
             showShippingErrorModal(index, 'amount_mismatch', row, order, excelDue, systemDue);
@@ -10249,13 +10244,57 @@ function reviewNextShippingRow(index) {
     } else {
         applyShippingReturn(order, row);
         shippingImportResults[index] = 'completed';
-        if (row.fromUnresolved) {
+        if (isFromUnresolved) {
             removeFromUnresolvedByTrackingCode(trackingCode);
+            toast(`↩️ تم تحويل الطلب ${order.orderCode} إلى مرتجع وإزالته من غير المفهوم`, 'warning');
+        } else {
+            toast(`↩️ تم تحويل الطلب ${order.orderCode} إلى مرتجع`, 'warning');
         }
-        toast(`↩️ تم تحويل الطلب ${order.orderCode} إلى مرتجع`, 'warning');
         setTimeout(() => reviewNextShippingRow(index + 1), 200);
     }
 }
+
+// حذف طلب من داخل المراجعة (من غير مفهوم)
+window.deleteShippingRowFromReview = async function(index) {
+    const row = shippingImportQueue[index];
+    if (!row) { toast('❌ بيانات الصف غير موجودة', 'danger'); return; }
+    
+    const trackingCode = String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim();
+    if (!trackingCode) { toast('⚠️ رقم الشحنة غير موجود', 'danger'); return; }
+    
+    if (!confirm(`هل أنت متأكد من حذف الطلب ${trackingCode}؟ سيتم نقله إلى سلة المحذوفات.`)) return;
+    
+    const order = allOrders.find(o => o.orderCode === trackingCode);
+    if (order) {
+        try {
+            await db.collection('orders').doc(order.id).update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                deletedBy: currentUser.uid,
+                originalStatus: order.status || 'جديد',
+                status: 'محذوف',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            Object.assign(order, {
+                isDeleted: true,
+                status: 'محذوف'
+            });
+        } catch (err) {
+            toast('❌ فشل الحذف: ' + err.message, 'danger');
+            return;
+        }
+    }
+    
+    // إزالته من "غير مفهوم" لو كان جاي منها
+    if (row.fromUnresolved) {
+        removeFromUnresolvedByTrackingCode(trackingCode);
+    }
+    
+    shippingImportResults[index] = 'completed';
+    toast('✅ تم نقل الطلب إلى سلة المحذوفات', 'success');
+    closeModal();
+    setTimeout(() => reviewNextShippingRow(index + 1), 200);
+};
 
 function removeFromUnresolvedByTrackingCode(trackingCode) {
     if (!trackingCode) return;
@@ -10273,7 +10312,11 @@ function removeFromUnresolvedByTrackingCode(trackingCode) {
 
 // دالة عرض تنبيه للطلبات الموجودة مسبقاً
 function showExistingOrderAlert(index, row, order) {
-    const trackingCode = String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim();
+  const isFromUnresolved = row.fromUnresolved === true;
+const deleteBtn = isFromUnresolved 
+    ? `<button type="button" class="btn btn-danger" onclick="deleteShippingRowFromReview(${index})">🗑️ حذف الطلب</button>` 
+    : '';
+    
     const html = `
         <div style="background:#fff4e5;border:1px solid var(--warning);padding:14px;border-radius:10px;margin-bottom:16px;">
             <strong>⚠️ هذا الطلب موجود مسبقاً في النظام:</strong><br>
@@ -10285,10 +10328,10 @@ function showExistingOrderAlert(index, row, order) {
             <div><strong>الهاتف:</strong> ${order.customerPhone || '—'}</div>
             <div><strong>الإجمالي:</strong> ${(order.total || 0).toLocaleString()} ج</div>
             <div><strong>الحالة في النظام:</strong> ${order.status || '—'}</div>
-            <div style="margin-top:6px;color:var(--muted);font-size:12px;">📌 طلب من الإكسل: ${row['المرسل اليه'] || '—'} | ${row['المحافظة'] || '—'}</div>
         </div>
         <div class="form-actions">
-            <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+            <button type="button" class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+            ${deleteBtn}
         </div>
     `;
     window._shippingErrorContext = { index, row, order, errorType: 'existing' };
@@ -10362,6 +10405,11 @@ async function applyShippingReturn(order, row) {
 }
 
 function showNewOrderAlert(index, row, order) {
+   const isFromUnresolved = row.fromUnresolved === true;
+const deleteBtn = isFromUnresolved 
+    ? `<button type="button" class="btn btn-danger" onclick="deleteShippingRowFromReview(${index})">🗑️ حذف الطلب</button>`
+        : '';
+    
     const html = `
         <div style="background:#fff4e5;border:1px solid var(--warning);padding:14px;border-radius:10px;margin-bottom:16px;">
             <strong>⚠️ هذا الطلب بحالة "جديد" وغير جاهز للشحن:</strong><br>
@@ -10377,7 +10425,8 @@ function showNewOrderAlert(index, row, order) {
             <div style="margin-top:6px;color:var(--muted);font-size:12px;">📌 طلب من الإكسل: ${row['المرسل اليه'] || '—'} | ${row['المحافظة'] || '—'}</div>
         </div>
         <div class="form-actions">
-            <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+            <button type="button" class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+            ${deleteBtn}
         </div>
     `;
     window._shippingErrorContext = { index, row, order, errorType: 'new_order' };
@@ -10436,9 +10485,10 @@ function showShippingErrorModal(index, errorType, row, order, excelDue, systemDu
                 <input type="text" id="shippingErrorNewCode" class="btn" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;direction:ltr;text-align:left;" placeholder="أدخل كود الطلب الصحيح..." />
             </div>
             <div class="form-actions">
-                <button class="btn btn-primary" onclick="retryShippingWithNewCode(${index})">🔄 إعادة المحاولة بالكود الجديد</button>
-                <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
-            </div>
+    <button type="button" class="btn btn-primary" onclick="retryShippingWithNewCode(${index})">🔄 إعادة المحاولة بالكود الجديد</button>
+    <button type="button" class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+    ${deleteBtn}
+</div>
         `;
     } else if (errorType === 'amount_mismatch') {
         const systemDueCorrect = (order.total || 0) - (order.baseShippingCost || order.shippingCost || 0);
@@ -10457,10 +10507,11 @@ function showShippingErrorModal(index, errorType, row, order, excelDue, systemDu
                 <label>✏️ تعديل المستحق (اختياري، اتركه كما هو للتأكيد بالقيمة الحالية)</label>
                 <input type="number" id="shippingErrorOverrideDue" class="btn" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;" step="0.01" value="${excelDue.toFixed(2)}" />
             </div>
-            <div class="form-actions">
-                <button class="btn btn-success" onclick="confirmShippingWithOverride(${index}, '${order.id}')">✔ تأكيد التسليم (بالمستحق المعدل)</button>
-                <button class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
-            </div>
+           <div class="form-actions">
+    <button type="button" class="btn btn-success" onclick="confirmShippingWithOverride(${index}, '${order.id}')">✔ تأكيد التسليم (بالمستحق المعدل)</button>
+    <button type="button" class="btn btn-danger" onclick="moveToUnresolved(${index})">🤔 غير مفهوم</button>
+    ${deleteBtn}
+</div>
         `;
     }
 
@@ -10536,16 +10587,33 @@ window.moveToUnresolved = function(index) {
 };
 
 window.confirmShippingWithOverride = async function(index, orderId) {
-    const overrideDue = parseFloat(document.getElementById('shippingErrorOverrideDue')?.value);
-    if (isNaN(overrideDue)) { toast('❌ قيمة غير صحيحة', 'danger'); return; }
+    // التحقق من الحقل
+    const overrideDueInput = document.getElementById('shippingErrorOverrideDue');
+    if (!overrideDueInput) {
+        toast('❌ لم يتم العثور على حقل المستحق', 'danger');
+        return;
+    }
+    
+    const overrideDue = parseFloat(overrideDueInput.value);
+    if (isNaN(overrideDue)) {
+        toast('❌ قيمة المستحق غير صحيحة', 'danger');
+        return;
+    }
 
-    const context = window._shippingErrorContext;
-    if (!context) { toast('❌ حدث خطأ في السياق', 'danger'); return; }
-
+    // البحث عن الطلب
     const order = allOrders.find(o => o.id === orderId);
-    if (!order) { toast('❌ الطلب غير موجود', 'danger'); return; }
+    if (!order) {
+        toast('❌ الطلب غير موجود', 'danger');
+        return;
+    }
+    
+    // الحصول على row من قائمة الانتظار مباشرة
+    const row = shippingImportQueue[index];
+    if (!row) {
+        toast('❌ بيانات الصف غير موجودة', 'danger');
+        return;
+    }
 
-    // استخدام baseShippingCost لحساب الإجمالي الجديد
     const baseShipping = order.baseShippingCost || order.shippingCost || 0;
     const newTotal = overrideDue + baseShipping;
     
@@ -10555,22 +10623,30 @@ window.confirmShippingWithOverride = async function(index, orderId) {
             total: newTotal,
             deliveredAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            shippingImportPaid: context.row['المدفوع'] || 0,
-            shippingImportShipping: context.row['الشحن'] || 0,
+            shippingImportPaid: parseFloat(row['المدفوع']) || 0,
+            shippingImportShipping: parseFloat(row['الشحن']) || 0,
             shippingImportDue: overrideDue,
-            shippingImportNote: context.row['السبب'] || '',
+            shippingImportNote: row['السبب'] || '',
             notes: (order.notes || '') + ' | تم التعديل يدوياً أثناء الاستيراد. المستحق الجديد: ' + overrideDue,
             isReturned: false,
             returnReceived: false,
         });
-        // تحديث الكائن المحلي
+        
         Object.assign(order, { status: 'تسليم', total: newTotal });
         shippingImportResults[index] = 'completed';
+        
+        // 🆕 إزالة من "غير مفهوم" لو الطلب جاي من هناك
+        const trackingCode = String(row['رقم الشحنة'] || row['رقم الشحنه'] || '').trim();
+        if (row.fromUnresolved && trackingCode) {
+            removeFromUnresolvedByTrackingCode(trackingCode);
+        }
+        
         toast(`✅ تم تسليم الطلب ${order.orderCode} بالقيمة المعدلة`, 'success');
         closeModal();
-        reviewNextShippingRow(index + 1);
+        setTimeout(() => reviewNextShippingRow(index + 1), 200);
     } catch (err) {
         toast('❌ فشل التحديث: ' + err.message, 'danger');
+        console.error('confirmShippingWithOverride error:', err);
     }
 };
 
