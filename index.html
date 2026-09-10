@@ -1601,11 +1601,12 @@ try {
         // ================================================================
         // INIT APP
         // ================================================================
-     function initApp() {
+     async function initApp() {
     buildNav();
-    // إزالة أي استدعاء لـ enablePersistence هنا لأنه تم تفعيله بالفعل في الأعلى
     startListeners();
-    loadAllData();
+    loadAllData().then(() => {
+        permanentDeleteExpiredOrders();  // ← ضيف السطر ده
+    });
 
     function startListeners() {
         // إلغاء المستمعين السابقين إن وجدوا
@@ -1707,14 +1708,19 @@ try {
         // ================================================================
         // FILTER DATA BY PAGE
         // ================================================================
-        function getFilteredOrders() {
+        function getFilteredOrders(includeDeleted = false) {
+    let orders;
     if (currentUserRole === 'admin' || currentUserRole === 'moderator') {
-        return [...allOrders];
+        orders = [...allOrders];
+    } else if (currentUserPageId) {
+        orders = allOrders.filter(o => o.pageId === currentUserPageId);
+    } else {
+        orders = [];
     }
-    if (currentUserPageId) {
-        return allOrders.filter(o => o.pageId === currentUserPageId);
+    if (!includeDeleted) {
+        orders = orders.filter(o => o.isDeleted !== true);
     }
-    return [];
+    return orders;
 }
 
         function getFilteredMarketers() {
@@ -2002,7 +2008,7 @@ try {
         const marketers = allMarketers.filter(m => m.pageId === p.id);
         const csUsers = allUsers.filter(u => u.pageId === p.id && u.role === 'customer_service');
         const adminUsers = allUsers.filter(u => u.role === 'admin' && u.pageId === p.id);
-        const orders = allOrders.filter(o => o.pageId === p.id);
+        const orders = allOrders.filter(o => o.pageId === p.id && !o.isDeleted);
         const totalProfit = orders.reduce((s, o) => s + (o.profit || 0), 0);
         const isMyPage = p.id === currentUserPageId;
 
@@ -3249,12 +3255,12 @@ function renderOrders() {
     let myOrdersSection = '';
     let myOrders = [];
     if (currentUserRole === 'admin' && currentUserPageId) {
-        myOrders = allOrders.filter(o => o.pageId === currentUserPageId);
-    } else if (currentUserRole === 'marketer' && currentUserPageId) {
-        myOrders = allOrders.filter(o => o.pageId === currentUserPageId);
-    } else if (currentUserRole === 'customer_service' && currentUserPageId) {
-        myOrders = allOrders.filter(o => o.pageId === currentUserPageId);
-    }
+    myOrders = allOrders.filter(o => o.pageId === currentUserPageId && !o.isDeleted);
+} else if (currentUserRole === 'marketer' && currentUserPageId) {
+    myOrders = allOrders.filter(o => o.pageId === currentUserPageId && !o.isDeleted);
+} else if (currentUserRole === 'customer_service' && currentUserPageId) {
+    myOrders = allOrders.filter(o => o.pageId === currentUserPageId && !o.isDeleted);
+}
 
     const isCS = currentUserRole === 'customer_service';
 
@@ -3444,14 +3450,14 @@ function renderCustomerServiceOrders() {
 
     // عرض طلبات الصفحة حسب صلاحية المستخدم
     let myOrders = [];
-    if (currentUserPageId && currentUser) {
-        const canSeeAll = currentUserData && currentUserData.canSeeAllOrders === true;
-        if (canSeeAll) {
-            myOrders = allOrders.filter(o => o.pageId === currentUserPageId);
-        } else {
-            myOrders = allOrders.filter(o => o.pageId === currentUserPageId && o.createdBy === currentUser.uid);
-        }
+   if (currentUserPageId && currentUser) {
+    const canSeeAll = currentUserData && currentUserData.canSeeAllOrders === true;
+    if (canSeeAll) {
+        myOrders = allOrders.filter(o => o.pageId === currentUserPageId && !o.isDeleted);
+    } else {
+        myOrders = allOrders.filter(o => o.pageId === currentUserPageId && o.createdBy === currentUser.uid && !o.isDeleted);
     }
+}
 
     const groups = {};
     const todayKey = getLocalDateKey(new Date());
@@ -3500,7 +3506,11 @@ function renderCustomerServiceOrders() {
             const dueDisplay = collectedDue !== null ? collectedDue.toLocaleString() + ' ج' : '—';
 
             return `
-            <tr data-order-id="${o.id}" data-day="${day}" data-stage="${stage}" data-page-id="${o.pageId || ''}" style="cursor:pointer;" class="${isPrinted ? 'printed-row' : ''}">
+            <tr data-order-id="${o.id}" data-day="${day}" data-stage="${stage}" 
+    data-page-id="${o.pageId || ''}" 
+    data-status="${o.status || 'جديد'}" 
+    data-governorate="${o.governorate || ''}" 
+    style="cursor:pointer;">
                 <td><strong>${o.orderCode || '#'+o.id.slice(0,8)}</strong> ${editedBadge}</td>
                 <td>${o.customerName||'—'}</td>
                 <td>${o.customerPhone||'—'}</td>
@@ -7533,11 +7543,12 @@ window.deleteOrderRow = async function(id) {
     try {
         const o = allOrders.find(x => x.id === id);
         if (!o) { toast('❌ الطلب غير موجود', 'danger'); return; }
+        if (o.isDeleted === true) { toast('⚠️ الطلب محذوف بالفعل', 'warning'); return; }
         await db.collection('orders').doc(id).update({
             isDeleted: true,
             deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
             deletedBy: currentUser.uid,
-            originalStatus: o.status || 'جديد',
+            originalStatus: o.originalStatus || o.status || 'جديد',  // ← احفظ الحالة الأصلية
             status: 'محذوف',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -7545,7 +7556,6 @@ window.deleteOrderRow = async function(id) {
         renderCurrentPage();
     } catch (err) {
         toast('❌ ' + err.message, 'danger');
-        console.error(err);
     }
 };
 
@@ -7681,7 +7691,7 @@ function computeSalesForOrders(orders) {
     const isAdminScope = (currentUserRole === 'admin' || currentUserRole === 'moderator');
 
     const cards = pagesInScope.map(p => {
-        const pOrders = allOrders.filter(o => o.pageId === p.id);
+    const pOrders = allOrders.filter(o => o.pageId === p.id && !o.isDeleted);
         const s = computeSalesForOrders(pOrders);
         return `
         <div class="sales-card">
@@ -7706,7 +7716,7 @@ function computeSalesForOrders(orders) {
     // الإجمالي الكلي
     let overallHtml = '';
     if (pagesInScope.length > 1) {
-        const allInScope = allOrders.filter(o => pagesInScope.some(p => p.id === o.pageId));
+        const allInScope = allOrders.filter(o => pagesInScope.some(p => p.id === o.pageId) && !o.isDeleted);
         const t = computeSalesForOrders(allInScope);
         overallHtml = `
         <div class="sales-card" style="border:2px solid var(--primary)">
@@ -7725,7 +7735,7 @@ function computeSalesForOrders(orders) {
  window.showSalesDetails = function(pageId) {
     const page = allPages.find(p => p.id === pageId);
     if (!page) { toast('❌ الصفحة غير موجودة', 'danger'); return; }
-    const pOrders = allOrders.filter(o => o.pageId === pageId);
+    const pOrders = allOrders.filter(o => o.pageId === pageId && !o.isDeleted);
     const delivered = pOrders.filter(o => o.status === 'تم التسليم');
     const pending = pOrders.filter(o => !['تم التسليم', 'ملغي', 'مرتجع'].includes(o.status));
     const lost = pOrders.filter(o => ['ملغي', 'مرتجع'].includes(o.status));
@@ -7807,7 +7817,7 @@ window.setShippingFilterStatus = function(val) {
 function renderShipping() {
     if (currentUserRole !== 'admin') return '<div class="card panel"><div class="text-muted">غير مصرح لك.</div></div>';
 
-    const shippingOrders = allOrders.filter(o => o.status === 'جاري الشحن');
+    const shippingOrders = allOrders.filter(o => o.status === 'جاري الشحن' && !o.isDeleted);
     shippingOrders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
     const stages = ['بحري', 'قبلي', 'داخلي شحن'];
@@ -8167,14 +8177,14 @@ window.restoreOrder = async function(id) {
         const o = allOrders.find(x => x.id === id);
         if (!o) { toast('❌ الطلب غير موجود', 'danger'); return; }
         const originalStatus = o.originalStatus || 'جديد';
-        await db.collection('orders').doc(id).update({
-            isDeleted: false,
-            deletedAt: null,
-            deletedBy: null,
-            originalStatus: null,
-            status: originalStatus,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+await db.collection('orders').doc(id).update({
+    isDeleted: false,
+    deletedAt: null,
+    deletedBy: null,
+    originalStatus: null,
+    status: originalStatus,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
         // إعادة حساب أرباح المسوق (إذا كان الطلب لم يُحتسب من قبل)
         // يمكنك إضافة منطق لزيادة أرباح المسوق إذا كان الطلب قد أُضيف سابقاً
         // لكننا نكتفي بالاسترداد دون تغيير الأرباح (لأنها لم تُحذف)
@@ -8371,8 +8381,8 @@ function renderReturnOrders() {
 // ================================================================
 // عرض المحذوفات (سلة المحذوفات)
 // ================================================================
-function renderDeletedOrders() {
-    let filtered = getFilteredOrders().filter(o => o.isDeleted === true);
+   function renderDeletedOrders() {
+    let filtered = getFilteredOrders(true).filter(o => o.isDeleted === true);
     if (!filtered.length) return '<div class="text-muted" style="padding:20px;">سلة المحذوفات فارغة</div>';
     const now = new Date();
     const rows = filtered.map(o => {
@@ -8430,27 +8440,37 @@ function renderOrderList(orders, title) {
     let html = sortedDays.map(day => {
         const isOpen = dayStates[day];
         const dayLabel = new Date(day+'T00:00:00').toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-        const rows = groups[day].map(o => {
-            const page = allPages.find(p=>p.id===o.pageId);
-            const stage = getOrderStage(o);
-            const editedBadge = o.edited ? '<span class="badge badge-warning" style="font-size:10px;">✏️ تم التعديل</span>' : '';
-            return `
-            <tr data-order-id="${o.id}">
-                <td><strong>${o.orderCode || '#'+o.id.slice(0,8)}</strong> ${editedBadge}</td>
-                <td>${o.customerName||'—'}</td>
-                <td>${o.customerPhone||'—'}</td>
-                <td>${o.address||'—'}</td>
-                <td>${(o.total||0).toLocaleString()} ج</td>
-                <td>${o.governorate||'—'}</td>
-                <td><span class="badge ${getStageBadge(stage)}">${stage}</span></td>
-                <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
-                <td>${page?.name||'—'}</td>
-                <td>
-                    <button class="btn btn-sm btn-info" onclick="viewOrder('${o.id}')">👁</button>
-                </td>
-            </tr>
-            `;
-        }).join('');
+       const rows = groups[day].map(o => {
+    const page = allPages.find(p=>p.id===o.pageId);
+    const stage = getOrderStage(o);
+    const editedBadge = o.edited ? '<span class="badge badge-warning" style="font-size:10px;">✏️ تم التعديل</span>' : '';
+    
+    // ===== حساب المستحق المحصل =====
+    const collectedDue = getOrderCollectedDue(o);
+    const dueDisplay = collectedDue !== null ? collectedDue.toLocaleString() + ' ج' : '—';
+    
+    return `
+    <tr data-order-id="${o.id}" data-day="${day}" data-stage="${stage}" 
+        data-page-id="${o.pageId || ''}" 
+        data-status="${o.status || 'جديد'}" 
+        data-governorate="${o.governorate || ''}" 
+        style="cursor:pointer;">
+        <td><strong>${o.orderCode || '#'+o.id.slice(0,8)}</strong> ${editedBadge}</td>
+        <td>${o.customerName||'—'}</td>
+        <td>${o.customerPhone||'—'}</td>
+        <td>${o.address||'—'}</td>
+        <td>${(o.total||0).toLocaleString()} ج</td>
+        <td>${dueDisplay}</td>   <!-- ← المستحق المحصل -->
+        <td>${o.governorate||'—'}</td>
+        <td><span class="badge ${getStageBadge(stage)}">${stage}</span></td>
+        <td><span class="badge ${getBadgeClass(o.status)}">${o.status||'جديد'}</span></td>
+        <td>${page?.name||'—'}</td>
+        <td>
+            <button class="btn btn-sm btn-info" onclick="event.stopPropagation();viewOrder('${o.id}')">👁</button>
+        </td>
+    </tr>
+    `;
+}).join('');
         const arrow = isOpen ? '▾' : '▸';
         return `
         <div class="day-section" data-day="${day}" style="border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;">
@@ -8464,7 +8484,7 @@ function renderOrderList(orders, title) {
             <div class="day-body" id="completedDayBody_${day}" style="display:${isOpen?'block':'none'}; padding:12px 16px;">
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>كود الطلب</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>الإجمالي</th><th>المحافظة</th><th>المرحلة</th><th>الحالة</th><th>الصفحة</th><th>إجراء</th></tr></thead>
+                      <thead><tr><th>كود الطلب</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>الإجمالي</th><th>المستحق المحصل</th><th>المحافظة</th><th>المرحلة</th><th>الحالة</th><th>الصفحة</th><th>إجراء</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
@@ -9397,7 +9417,7 @@ function filterOrders() {
                 const rowPageId = String(row.dataset.pageId || '').trim();
                 const rowStage = row.dataset.stage || '';
                 const cells = row.querySelectorAll('td');
-                const govCell = cells[6]?.textContent?.trim() || '';
+                const govCell = cells[7]?.textContent?.trim() || '';
 
                 let show = true;
                 if (searchVal && !text.includes(searchVal)) show = false;
@@ -10028,8 +10048,8 @@ window.filterMyOrders = function() {
         rows.forEach(row => {
             const text = row.textContent?.toLowerCase() || '';
             const rowCreatorId = row.dataset.creatorId || '';
-            const rowStatus = row.querySelector('td:nth-child(8)')?.textContent?.trim() || '';
-            const rowGov = row.querySelector('td:nth-child(6)')?.textContent?.trim() || '';
+            const rowStatus = row.querySelector('td:nth-child(9)')?.textContent?.trim() || '';  // الحالة
+            const rowGov = row.querySelector('td:nth-child(7)')?.textContent?.trim() || '';     // المحافظة
 
             let show = true;
             if (searchVal && !text.includes(searchVal)) show = false;
