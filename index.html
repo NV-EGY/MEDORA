@@ -7350,13 +7350,17 @@ window.viewOrder = function(id) {
     } else {
         itemsHtml = 'لا توجد منتجات';
     }
-       // ===== تفاصيل المنتجات المُسلّمة / المرتجعة (لو الطلب اتصفّى مع مندوب أو اتأكد رجوعه) =====
+       // ===== تفاصيل المنتجات المُسلّمة / المرتجعة =====
+    // ✅ تظهر فقط للمرتجع المؤكد استلامه
     let productStatusHtml = '';
-    const statusArr = (o.returnProductStatus && o.returnProductStatus.length)
-        ? o.returnProductStatus
-        : (o.driverProductStatus && o.driverProductStatus.length)
-            ? o.driverProductStatus
-            : null;
+    const isConfirmedReturnForDetails = o.status === 'مرتجع' && o.returnReceived === true;
+    const statusArr = isConfirmedReturnForDetails ? (
+        (o.returnProductStatus && o.returnProductStatus.length)
+            ? o.returnProductStatus
+            : (o.driverProductStatus && o.driverProductStatus.length)
+                ? o.driverProductStatus
+                : null
+    ) : null;
 
     if (statusArr && statusArr.length) {
         const isPartial = statusArr.some(p => (p.deliveredQty || 0) < (p.totalQty || 1));
@@ -7914,11 +7918,23 @@ function computeSalesForOrders(orders) {
         !['تسليم', 'ملغي', 'مرتجع'].includes(o.status)
     );
 
-        const formatOrders = (orders, label) => {
-        if (!orders.length) return `<div class="text-muted" style="padding:12px;">لا توجد طلبات ${label}</div>`;
-        return `<div class="table-wrap" style="max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;">
+    // ✅ دالة فرز: المفتوح (⏳) أولاً، ثم المقفل (✅)
+    const sortBySettlement = (orders) => {
+        return [...orders].sort((a, b) => {
+            const aSettled = a.isSettled === true ? 1 : 0;
+            const bSettled = b.isSettled === true ? 1 : 0;
+            if (aSettled !== bSettled) return aSettled - bSettled; // المفتوح أولاً
+            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        });
+    };
+
+    const buildOrdersTable = (orders, label) => {
+        if (!orders.length) return `<div class="text-muted" style="padding:12px;text-align:center;">لا توجد طلبات ${label}</div>`;
+        const sortedOrders = sortBySettlement(orders);
+        
+        return `<div class="table-wrap" style="border:1px solid var(--line);border-radius:8px;">
             <table>
-            <thead style="position:sticky;top:0;background:var(--bg);z-index:1;">
+            <thead style="background:var(--bg);">
                 <tr>
                     <th>كود الطلب</th>
                     <th>العميل</th>
@@ -7929,13 +7945,21 @@ function computeSalesForOrders(orders) {
                     <th>التقفيل</th>
                 </tr>
             </thead>
-            <tbody>${orders.map(o => {
+            <tbody>${sortedOrders.map(o => {
                 const collected = getOrderCollectedDue(o) || 0;
                 const profit = calculateOrderNetProfit(o);
                 const settled = o.isSettled === true;
-                const hasDetails = (o.returnProductStatus && o.returnProductStatus.length) ||
-                                   (o.driverProductStatus && o.driverProductStatus.length);
+                const isConfirmedReturn = o.status === 'مرتجع' && o.returnReceived === true;
+                const hasDetails = isConfirmedReturn && (
+                    (o.returnProductStatus && o.returnProductStatus.length) ||
+                    (o.driverProductStatus && o.driverProductStatus.length)
+                );
                 const detailRowId = 'detail_' + o.id;
+
+                // ✅ تمييز الصف المقفل باللون الأخضر + شريط جانبي
+                const rowStyle = settled 
+                    ? 'background:#e8f5e9;border-right:4px solid var(--success);' 
+                    : '';
 
                 // ===== صفوف تفاصيل المنتجات =====
                 let detailRow = '';
@@ -7989,7 +8013,7 @@ function computeSalesForOrders(orders) {
                 }
 
                 return `
-                    <tr>
+                    <tr style="${rowStyle}">
                         <td>${o.orderCode || '#'+o.id.slice(0,8)}</td>
                         <td>${o.customerName||'—'}</td>
                         <td>${collected.toLocaleString()} ج</td>
@@ -8008,30 +8032,62 @@ function computeSalesForOrders(orders) {
         </table></div>`;
     };
 
+    // ✅ بناء الأقسام القابلة للطي
+    const sectionsHtml = `
+        <div style="display:grid;gap:12px;">
+            ${renderCollapsibleSalesSection('delivered', '✅ الطلبات المُسلّمة', 'var(--success)', delivered.length, buildOrdersTable(delivered, 'المُسلّمة'))}
+            ${renderCollapsibleSalesSection('returns', '↩️ المرتجعات المؤكد استلامها', 'var(--warning)', returnedConfirmed.length, buildOrdersTable(returnedConfirmed, 'المرتجعة'))}
+            ${renderCollapsibleSalesSection('lost', '❌ الطلبات الملغية/المرتجعة', 'var(--danger)', lostUnconfirmed.length, buildOrdersTable(lostUnconfirmed, 'الملغية/المرتجعة'))}
+            ${renderCollapsibleSalesSection('pending', '⏳ الطلبات قيد المتابعة', 'var(--info)', pending.length, buildOrdersTable(pending, 'قيد المتابعة'))}
+        </div>
+    `;
+
     openModal(`📊 تفاصيل مبيعات ${page.name}`, `
         <div style="display:grid;gap:16px;">
-            <div>
-                <h4 style="color:var(--success);margin-bottom:8px;">✅ الطلبات المُسلّمة (${delivered.length})</h4>
-                ${formatOrders(delivered, 'المُسلّمة')}
-            </div>
-            <div>
-                <h4 style="color:var(--warning);margin-bottom:8px;">↩️ المرتجعات المؤكد استلامها (${returnedConfirmed.length})</h4>
-                ${formatOrders(returnedConfirmed, 'المرتجعة')}
-            </div>
-            <div>
-                <h4 style="color:var(--danger);margin-bottom:8px;">❌ الطلبات الملغية/المرتجعة (${lostUnconfirmed.length})</h4>
-                ${formatOrders(lostUnconfirmed, 'الملغية/المرتجعة')}
-            </div>
-            <div>
-                <h4 style="color:var(--info);margin-bottom:8px;">⏳ الطلبات قيد المتابعة (${pending.length})</h4>
-                ${formatOrders(pending, 'قيد المتابعة')}
-            </div>
+            ${sectionsHtml}
             <div class="flex gap-1" style="justify-content:flex-end;">
                 <button class="btn btn-primary" onclick="exportOrdersToExcel(pOrders, 'تفاصيل_مبيعات_${page.name}')">📥 تصدير Excel</button>
                 <button class="btn" onclick="closeModal()">إغلاق</button>
             </div>
         </div>
     `);
+};
+
+// ================================================================
+// ✅ دوال الأقسام القابلة للطي (ستائر)
+// ================================================================
+window.renderCollapsibleSalesSection = function(sectionKey, title, color, count, contentHtml) {
+    const storageKey = 'sales_section_open_' + sectionKey;
+    const stored = sessionStorage.getItem(storageKey);
+    const isOpen = stored === null ? true : stored === 'true';
+    const bodyId = 'sales_section_body_' + sectionKey;
+    const arrowId = 'sales_section_arrow_' + sectionKey;
+    
+    return `
+    <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg);cursor:pointer;border-right:4px solid ${color};transition:background 0.2s;" onclick="toggleSalesSection('${sectionKey}')" onmouseover="this.style.background='#f0f2f7'" onmouseout="this.style.background='var(--bg)'">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <h4 style="margin:0;color:${color};font-size:14px;">${title}</h4>
+                <span class="badge" style="background:${color};color:#fff;font-size:11px;padding:2px 10px;border-radius:20px;">${count}</span>
+            </div>
+            <span id="${arrowId}" style="font-size:16px;color:${color};transition:transform 0.2s;">${isOpen ? '▾' : '▸'}</span>
+        </div>
+        <div id="${bodyId}" style="display:${isOpen ? 'block' : 'none'};padding:12px 16px;background:var(--card);">
+            ${contentHtml}
+        </div>
+    </div>
+    `;
+};
+
+window.toggleSalesSection = function(sectionKey) {
+    const body = document.getElementById('sales_section_body_' + sectionKey);
+    const arrow = document.getElementById('sales_section_arrow_' + sectionKey);
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    const newState = !isOpen;
+    body.style.display = newState ? 'block' : 'none';
+    if (arrow) arrow.textContent = newState ? '▾' : '▸';
+    sessionStorage.setItem('sales_section_open_' + sectionKey, String(newState));
 };
 
 window.toggleSalesDetailRow = function(rowId, btn) {
