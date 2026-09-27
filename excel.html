@@ -2905,10 +2905,24 @@ $('#addPageBtn').addEventListener('click', async () => {
     delete $('#npPrefix').dataset.touched;
 
     toast('✅ تم إنشاء الصفحة وحساب الدخول بنجاح');
-  } catch(err) {
+    } catch(err) {
     console.error('❌ Page create error:', err);
     console.error('Code:', err.code);
     console.error('Message:', err.message);
+
+    // 🧹 تنظيف: لو تم إنشاء user في Auth بس فشلت الكتابة في Firestore، امسحه
+    try {
+      if(err.code && err.code.startsWith('permission-denied')){
+        // Firestore write failed - delete the Auth user that was just created
+        const currentUser = window.fbSecondaryAuth.currentUser;
+        if(currentUser && currentUser.email === email){
+          await currentUser.delete();
+          console.log('🧹 Deleted orphaned Auth user');
+        }
+      }
+    } catch(cleanupErr){
+      console.warn('Cleanup failed (user must delete manually):', cleanupErr);
+    }
 
     const msgs = {
       'auth/email-already-in-use': 'هذا الإيميل مستخدم بالفعل — جرّب إيميل تاني',
