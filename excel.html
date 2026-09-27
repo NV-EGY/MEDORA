@@ -2055,13 +2055,34 @@ document.addEventListener('click', e => {
 
   if(action === 'invoice'){ openInvoice(o); return; }
   if(action === 'edit'){ openOrderEdit(o.id); return; }
-  if(action === 'deliver'){ o.status='delivered'; o.statusAt=todayISO(); saveState(); renderAll(); toast('✅ تم نقل الطلب '+o.code+' للتسليمات'); return; }
-  if(action === 'cancel'){ o.status='cancelled'; o.statusAt=todayISO(); saveState(); renderAll(); toast('🚫 تم نقل الطلب '+o.code+' للملغيين'); return; }
-  if(action === 'restore'){ o.status='pending'; o.statusAt=null; saveState(); renderAll(); toast('↩ تم استرجاع الطلب '+o.code); return; }
+  
+  if(action === 'deliver'){
+    if(!confirm(`📦 نقل الطلب إلى التسليمات؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\nالمحمول: ${o.mobile}`)) return;
+    o.status='delivered'; o.statusAt=todayISO();
+    saveState(); renderAll();
+    alert(`✅ تم نقل الطلب ${o.code} للتسليمات بنجاح`);
+    return;
+  }
+  if(action === 'cancel'){
+    if(!confirm(`🚫 نقل الطلب إلى الملغيين؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\nالمحمول: ${o.mobile}`)) return;
+    o.status='cancelled'; o.statusAt=todayISO();
+    saveState(); renderAll();
+    alert(`🚫 تم نقل الطلب ${o.code} للملغيين`);
+    return;
+  }
+  if(action === 'restore'){
+    if(!confirm(`↩️ استرجاع الطلب إلى الطلبات الحالية؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}`)) return;
+    o.status='pending'; o.statusAt=null;
+    saveState(); renderAll();
+    alert(`↩️ تم استرجاع الطلب ${o.code} بنجاح`);
+    return;
+  }
   if(action === 'delete'){
-    if(!confirm(`حذف الطلب ${o.code} نهائياً؟`)) return;
+    if(!confirm(`🗑 حذف الطلب نهائياً؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\n\n⚠️ لا يمكن التراجع!`)) return;
     state.orders = state.orders.filter(x => x.id !== id);
-    saveState(); renderAll(); toast('🗑 تم الحذف'); return;
+    saveState(); renderAll();
+    alert(`🗑 تم حذف الطلب ${o.code}`);
+    return;
   }
 });
 
@@ -2347,15 +2368,36 @@ function openOrderEdit(id){
       </div>
       <button type="button" class="btn ghost sm" id="e_addItem" style="margin-top:10px">➕ إضافة منتج</button>
     </div>
-    <div class="edit-sec">
+        <div class="edit-sec">
       <h4>الحساب</h4>
       <div class="grid">
         <div class="field"><label>الشحن</label><input id="e_shipping" type="number" min="0" value="${num(o.shipping)}"></div>
+        ${
+          o.settled
+            ? `<div class="field">
+                 <label>الحساب (يدوي) — 🔒 مُسوّى</label>
+                 <input type="number" value="${num(o.manual)}" readonly style="background:#ecfdf5;color:#15803d;font-weight:800;cursor:not-allowed;">
+               </div>`
+            : (o.status !== 'pending'
+                ? `<div class="field">
+                     <label>الحساب (يدوي) ✏️</label>
+                     <input id="e_manual" type="number" min="0" step="0.01" value="${num(o.manual)}" placeholder="0" style="background:#fffbeb;font-weight:800;color:#b45309;">
+                   </div>`
+                : `<div class="field">
+                     <label>الحساب (يدوي) — متاح بعد التسليم/الإلغاء</label>
+                     <input type="number" value="" disabled placeholder="—" style="background:#f1f5f9;cursor:not-allowed;">
+                   </div>`)
+        }
       </div>
       <div class="edit-total-line">
         <span>الإجمالي الكلي:</span>
         <span id="e_total">${money(o.total)} ج.م</span>
       </div>
+      ${o.settled
+        ? `<div class="edit-locked-note" style="margin-top:10px">
+             🔒 <b>تمت تسوية هذا الطلب بالفعل</b> — لا يمكن تعديل الحساب اليدوي.
+           </div>`
+        : ''}
     </div>
   `;
 
@@ -2409,6 +2451,11 @@ document.addEventListener('click', e => {
 });
 $('#saveEditBtn').addEventListener('click', () => {
   const o = state.orders.find(x => x.id === editingId); if(!o) return;
+    // 💰 حفظ الحساب اليدوي (لو الطلب مش مسوّى وفي التسليم/الإلغاء)
+  const manualEl = $('#e_manual');
+  if(manualEl && !manualEl.disabled && !o.settled){
+    o.manual = num(manualEl.value);
+  }
   o.customerName = $('#e_name').value.trim();
   o.mobile = normalizePhone($('#e_mobile').value);
   o.landline = normalizePhone($('#e_landline').value);
