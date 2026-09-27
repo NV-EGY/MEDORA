@@ -370,13 +370,19 @@ table.inv-tbl .c{text-align:center}
   };
 
   try {
+    // التطبيق الرئيسي (للأدمن والمستخدمين)
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // تطبيق ثانوي (لإنشاء مستخدمين جدد بدون تسجيل خروج الأدمن)
+    const secondaryApp = initializeApp(firebaseConfig, 'Secondary');
+    const secondaryAuth = getAuth(secondaryApp);
+
     window.fbApp = app;
     window.fbAuth = auth;
     window.fbDb = db;
+    window.fbSecondaryAuth = secondaryAuth;
     window.fbDoc = doc;
     window.fbSetDoc = setDoc;
     window.fbGetDoc = getDoc;
@@ -387,6 +393,9 @@ table.inv-tbl .c{text-align:center}
     window.fbOnAuth = onAuthStateChanged;
     window.fbReady = true;
     window.fbCurrentUser = null;
+    window.currentRole = null;
+    window.currentPageId = null;
+    window.currentPageName = null;
 
     console.log('✅ Firebase initialized');
     window.dispatchEvent(new Event('fb-ready'));
@@ -669,12 +678,17 @@ table.inv-tbl .c{text-align:center}
         <h3>إدارة الصفحات / الأرباح</h3>
         <button class="btn ghost sm" id="openReportBtn">📊 تقرير أرباح شامل</button>
       </div>
-      <div class="add-page-row">
-        <input id="npName" placeholder="اسم الصفحة (مثال: mina)">
-        <input id="npPhone" placeholder="رقم تليفون الصفحة" dir="ltr">
-        <input id="npPrefix" placeholder="بادئة الكود (تلقائي 3 حروف)" maxlength="6" dir="ltr">
-        <button class="btn primary" id="addPageBtn">➕ إضافة</button>
-      </div>
+      <div class="add-page-row" style="grid-template-columns:1.2fr 1fr 1fr 1.4fr 1.2fr auto">
+  <input id="npName" placeholder="اسم الصفحة (مثال: mina)">
+  <input id="npPhone" placeholder="رقم التليفون" dir="ltr">
+  <input id="npPrefix" placeholder="البادئة (تلقائي)" maxlength="6" dir="ltr">
+  <input id="npEmail" type="email" placeholder="📧 إيميل الصفحة" dir="ltr">
+  <input id="npPassword" type="password" placeholder="🔑 كلمة المرور" dir="ltr">
+  <button class="btn primary" id="addPageBtn">➕ إضافة</button>
+</div>
+<p style="font-size:11.5px;color:var(--muted);margin:-8px 0 14px;line-height:1.7;">
+  💡 الإيميل والباسورد هيتعملوا حساب للصفحة — صاحب الصفحة يقدر يدخل بيهم ويشوف طلباته وأرباحه بس (قراءة فقط).
+</p>
       <div class="table-wrap">
         <table class="tbl" style="min-width:1100px">
           <thead><tr>
@@ -884,10 +898,11 @@ let editingId = null;
 let settlingIds = null;
 let settlingPageId = null;
 
-function mkPage(name, phone, prefix, next){
+function mkPage(name, phone, prefix, next, email){
   return {
     id:uid(), name, phone:normalizePhone(phone||''),
     prefix:prefix||prefixOf(name), next:next||1,
+    email: email || '',
     settledTotal:0, settlements:[]
   };
 }
@@ -897,6 +912,7 @@ function loadState(){
     s.pages.forEach(p => {
       if(!Array.isArray(p.settlements)) p.settlements = [];
       if(p.settledTotal === undefined) p.settledTotal = 0;
+      if(p.email === undefined) p.email = '';
     });
     s.orders.forEach(o => {
       if(o.settled === undefined) o.settled = false;
@@ -918,12 +934,11 @@ function loadState(){
     }
   }
 
-  // بحث عن أي backup
   try {
     const bk = Object.keys(localStorage).find(k => k.startsWith(KEY + '_backup_'));
     if(bk){
       const s = fix(JSON.parse(localStorage.getItem(bk)));
-      if(s){ console.log('✅ Loaded from backup:', bk); return s; }
+      if(s){ console.log('✅ Loaded from backup'); return s; }
     }
   } catch(e){}
 
@@ -1314,6 +1329,22 @@ function renderPageSelect(){
 function renderPageFilter(){
   const sel = $('#pageFilter');
   const cur = sel.value;
+
+  // 👤 Page user: بس صفحته
+  if(window.currentRole === 'page' && window.currentPageId){
+    const myPage = state.pages.find(p => p.id === window.currentPageId);
+    if(myPage){
+      sel.innerHTML = `<option value="${myPage.id}">${esc(myPage.name)}</option>`;
+      sel.value = myPage.id;
+    } else {
+      sel.innerHTML = '<option value="">— صفحتك غير موجودة —</option>';
+    }
+    sel.disabled = true;
+    return;
+  }
+
+  // 👑 Admin: كل الصفحات
+  sel.disabled = false;
   sel.innerHTML = '<option value="">📄 كل الصفحات</option>' +
     state.pages.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
   if(state.pages.some(p => p.id === cur)) sel.value = cur;
@@ -2409,16 +2440,72 @@ $('#exportReportBtn').addEventListener('click', () => {
 /* =========================================================
    PAGES: ADD NEW
    ========================================================= */
-$('#addPageBtn').addEventListener('click', () => {
+$('#addPageBtn').addEventListener('click', async () => {
+  // الأدمن فقط يقدر ينشئ صفحات
+  if(window.currentRole !== 'admin'){
+    toast('⚠️ غير مسموح');
+    return;
+  }
+
   const name = $('#npName').value.trim();
+  const email = $('#npEmail').value.trim();
+  const password = $('#npPassword').value;
+
   if(!name){ toast('⚠️ اكتب اسم الصفحة'); $('#npName').focus(); return; }
-  if(state.pages.some(p => p.name.toLowerCase() === name.toLowerCase())){ toast('⚠️ موجودة بالفعل'); return; }
+  if(state.pages.some(p => p.name.toLowerCase() === name.toLowerCase())){ toast('⚠️ اسم الصفحة موجود بالفعل'); return; }
+  if(!email){ toast('⚠️ اكتب إيميل الصفحة'); $('#npEmail').focus(); return; }
+  if(!password || password.length < 6){ toast('⚠️ كلمة المرور 6 حروف على الأقل'); $('#npPassword').focus(); return; }
+
   const prefix = ($('#npPrefix').value.trim() || prefixOf(name)).toUpperCase().slice(0,6);
   const phone = normalizePhone($('#npPhone').value);
-  state.pages.push(mkPage(name, phone, prefix, 1));
-  saveState(); renderAll();
-  $('#npName').value=''; $('#npPhone').value=''; $('#npPrefix').value=''; delete $('#npPrefix').dataset.touched;
-  toast('✅ تم إضافة الصفحة: '+name);
+
+  // إنشاء الصفحة في الحالة
+  const newPage = mkPage(name, phone, prefix, 1, email);
+  state.pages.push(newPage);
+
+  const btn = $('#addPageBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإنشاء...';
+
+  try {
+    // إنشاء حساب Firebase للصفحة عبر التطبيق الثانوي (بدون تسجيل خروج الأدمن)
+    const cred = await window.fbCreateUser(window.fbSecondaryAuth, email, password);
+    const newUid = cred.user.uid;
+
+    // حفظ وثيقة المستخدم مع دوره
+    await window.fbSetDoc(window.fbDoc(window.fbDb, 'users', newUid), {
+      email: email,
+      role: 'page',
+      pageId: newPage.id,
+      pageName: newPage.name,
+      createdAt: new Date().toISOString()
+    });
+
+    // تسجيل خروج المستخدم الجديد من التطبيق الثانوي
+    await window.fbSignOut(window.fbSecondaryAuth);
+
+    // حفظ محلياً + السيرفر
+    saveState(); renderAll();
+    $('#npName').value=''; $('#npPhone').value=''; $('#npPrefix').value='';
+    $('#npEmail').value=''; $('#npPassword').value='';
+    delete $('#npPrefix').dataset.touched;
+
+    toast('✅ تم إنشاء الصفحة وحساب الدخول بنجاح');
+  } catch(err) {
+    console.error('Page create error:', err);
+    // حذف الصفحة من الحالة لو فشل إنشاء الحساب
+    state.pages = state.pages.filter(p => p.id !== newPage.id);
+
+    const msgs = {
+      'auth/email-already-in-use': 'الإيميل مستخدم بالفعل',
+      'auth/invalid-email': 'الإيميل غير صالح',
+      'auth/weak-password': 'كلمة المرور ضعيفة'
+    };
+    alert('❌ فشل إنشاء الحساب:\n' + (msgs[err.code] || err.message));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '➕ إضافة';
+  }
 });
 $('#npName').addEventListener('input', e => {
   if(!$('#npPrefix').dataset.touched) $('#npPrefix').value = prefixOf(e.target.value);
@@ -2555,7 +2642,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* =========================================================
-   🔥 FIREBASE AUTH & SYNC
+   🔥 FIREBASE AUTH & ROLE SYSTEM
    ========================================================= */
 
 function showSyncIndicator(text, hideAfter){
@@ -2577,20 +2664,24 @@ function showAuthScreen(){
 
   const html = `
     <div id="authOverlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#4f46e5,#9333ea);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
-      <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:420px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);animation:pop .35s ease;">
+      <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:420px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);">
         <div style="text-align:center;margin-bottom:24px;">
           <div style="font-size:52px;margin-bottom:8px;">🔐</div>
           <h2 style="font-size:22px;font-weight:900;color:#1e293b;">تسجيل الدخول</h2>
-          <p style="font-size:13px;color:#64748b;margin-top:6px;">سجّل دخولك لمزامنة البيانات بين الأجهزة</p>
+          <p style="font-size:13px;color:#64748b;margin-top:6px;">ادخل ببيانات حسابك للوصول للنظام</p>
         </div>
-        <input id="authEmail" type="email" placeholder="📧 البريد الإلكتروني"
+        <input id="authEmail" type="email" placeholder="📧 البريد الإلكتروني" autocomplete="username"
           style="width:100%;font-family:inherit;font-size:14px;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:10px;outline:none;">
-        <input id="authPass" type="password" placeholder="🔑 كلمة المرور"
+        <input id="authPass" type="password" placeholder="🔑 كلمة المرور" autocomplete="current-password"
           style="width:100%;font-family:inherit;font-size:14px;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:16px;outline:none;">
-        <button id="authLoginBtn" style="width:100%;background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:13px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;">🔓 تسجيل الدخول</button>
-        <button id="authSignupBtn" style="width:100%;background:#f1f5f9;color:#475569;border:0;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">✨ إنشاء حساب جديد</button>
+        <button id="authLoginBtn" style="width:100%;background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:13px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">
+          🔓 تسجيل الدخول
+        </button>
         <div id="authMsg" style="font-size:12.5px;text-align:center;margin-top:14px;font-weight:700;min-height:18px;color:#dc2626;"></div>
-        <div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;line-height:1.7;">بياناتك محفوظة على السيرفر بشكل آمن<br>تقدر تدخل من أي جهاز</div>
+        <div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;line-height:1.7;">
+          للتسجيل — تواصل مع الأدمن<br>
+          حسابك مربوط بصلاحيات محددة
+        </div>
       </div>
     </div>
   `;
@@ -2599,12 +2690,11 @@ function showAuthScreen(){
   const emailEl = document.getElementById('authEmail');
   const passEl  = document.getElementById('authPass');
   const msgEl   = document.getElementById('authMsg');
-  const showMsg = (text) => { msgEl.textContent = text; };
 
   document.getElementById('authLoginBtn').onclick = async () => {
-    showMsg('');
+    msgEl.textContent = '';
     const email = emailEl.value.trim(), pass = passEl.value;
-    if(!email || !pass){ showMsg('⚠️ اكتب البريد وكلمة المرور'); return; }
+    if(!email || !pass){ msgEl.textContent = '⚠️ اكتب البريد وكلمة المرور'; return; }
     try { await window.fbSignIn(window.fbAuth, email, pass); }
     catch(err) {
       const msgs = {
@@ -2614,26 +2704,9 @@ function showAuthScreen(){
         'auth/invalid-email': 'البريد غير صالح',
         'auth/too-many-requests': 'محاولات كثيرة - استنى شوية'
       };
-      showMsg('❌ ' + (msgs[err.code] || err.message));
+      msgEl.textContent = '❌ ' + (msgs[err.code] || err.message);
     }
   };
-
-  document.getElementById('authSignupBtn').onclick = async () => {
-    showMsg('');
-    const email = emailEl.value.trim(), pass = passEl.value;
-    if(!email || !pass){ showMsg('⚠️ اكتب البريد وكلمة المرور'); return; }
-    if(pass.length < 6){ showMsg('⚠️ كلمة المرور لازم 6 حروف على الأقل'); return; }
-    try { await window.fbCreateUser(window.fbAuth, email, pass); }
-    catch(err) {
-      const msgs = {
-        'auth/email-already-in-use': 'البريد مستخدم بالفعل - جرب تسجيل الدخول',
-        'auth/weak-password': 'كلمة المرور ضعيفة',
-        'auth/invalid-email': 'البريد غير صالح'
-      };
-      showMsg('❌ ' + (msgs[err.code] || err.message));
-    }
-  };
-
   passEl.addEventListener('keypress', e => { if(e.key === 'Enter') document.getElementById('authLoginBtn').click(); });
   setTimeout(() => emailEl.focus(), 100);
 }
@@ -2643,25 +2716,31 @@ function hideAuthScreen(){
   if(el) el.remove();
 }
 
-function addLogoutButton(user){
-  if(document.getElementById('logoutBtn')) return;
+function addUserBadge(user, role, pageName){
+  if(document.getElementById('userBadge')) return;
   const topStats = document.querySelector('.top-stats');
   if(!topStats) return;
 
   const wrapper = document.createElement('div');
+  wrapper.id = 'userBadge';
   wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
   const badge = document.createElement('span');
-  badge.style.cssText = 'font-size:11.5px;font-weight:700;opacity:.85;direction:ltr;';
-  badge.textContent = user.email || 'مستخدم';
+  badge.style.cssText = 'font-size:11.5px;font-weight:700;padding:5px 10px;background:rgba(255,255,255,.2);border-radius:8px;';
+  if(role === 'admin'){
+    badge.innerHTML = '👑 الأدمن';
+    badge.title = user.email || '';
+  } else {
+    badge.innerHTML = '👤 ' + (pageName || 'صفحة');
+    badge.title = user.email || '';
+  }
 
   const btn = document.createElement('button');
-  btn.id = 'logoutBtn';
   btn.className = 'btn sm';
   btn.style.cssText = 'background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);';
   btn.innerHTML = '🚪 خروج';
   btn.onclick = async () => {
-    if(!confirm('تسجيل الخروج؟\n\nبياناتك هتفضل محفوظة على السيرفر.')) return;
+    if(!confirm('تسجيل الخروج؟')) return;
     try { await window.fbSignOut(window.fbAuth); location.reload(); }
     catch(err) { alert('خطأ: ' + err.message); }
   };
@@ -2671,32 +2750,152 @@ function addLogoutButton(user){
   topStats.appendChild(wrapper);
 }
 
+/* =========================================================
+   🎯 تطبيق صلاحيات الدور على الواجهة
+   ========================================================= */
+function applyRoleRestrictions(role, pageId, pageName){
+  // شيل أي قيود قديمة
+  document.body.classList.remove('role-page', 'role-admin');
+  const oldStyle = document.getElementById('roleStyle');
+  if(oldStyle) oldStyle.remove();
+
+  if(role === 'admin'){
+    document.body.classList.add('role-admin');
+    const sub = document.querySelector('.brand p');
+    if(sub) sub.textContent = 'إدخال Excel مباشر • تسليمات • ملغيين • فواتير • تسويات';
+    return;
+  }
+
+  // 👤 صفحة: قيود كاملة
+  document.body.classList.add('role-page');
+
+  const sub = document.querySelector('.brand p');
+  if(sub) sub.textContent = '👤 صفحة: ' + (pageName || '');
+
+  // اخفاء التابس اللي مش مسموحة
+  const hideTabs = ['excel', 'new', 'pages'];
+  document.querySelectorAll('.tab').forEach(t => {
+    if(hideTabs.includes(t.dataset.view)){
+      t.style.display = 'none';
+    }
+  });
+
+  // انتقل لتاب "الطلبات" تلقائياً
+  const ordersTab = document.querySelector('.tab[data-view="orders"]');
+  if(ordersTab && !ordersTab.classList.contains('active')){
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    ordersTab.classList.add('active');
+    document.getElementById('view-orders').classList.add('active');
+  }
+
+  // اخفاء الـ export dropdown
+  const expMenu = document.querySelector('.export-menu');
+  if(expMenu) expMenu.style.display = 'none';
+
+  // إضافة CSS لإخفاء الأزرار الحساسة
+  const style = document.createElement('style');
+  style.id = 'roleStyle';
+  style.textContent = `
+    /* اخفاء أزرار التحكم للصفحات */
+    body.role-page .mini.ok,
+    body.role-page .mini.no,
+    body.role-page .mini.back,
+    body.role-page .mini.rm,
+    body.role-page .mini.settle,
+    body.role-page .mini.view,
+    body.role-page .acc-eq,
+    body.role-page [data-bulk],
+    body.role-page .bulk-bar,
+    body.role-page .col-check,
+    body.role-page th.col-check,
+    body.role-page #addPageBtn,
+    body.role-page #openReportBtn,
+    body.role-page [data-delpage],
+    body.role-page [data-settle-page],
+    body.role-page [data-history-page],
+    body.role-page .add-page-row,
+    body.role-page .page-inp,
+    body.role-page .acc-wrap {
+      display: none !important;
+    }
+    body.role-page .card-head .hint-mini { display: none; }
+    body.role-page .card-head { justify-content: flex-start; }
+    body.role-page .actions { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
+
+/* =========================================================
+   🔄 onUserLoggedIn - تحميل الدور والبيانات
+   ========================================================= */
 async function onUserLoggedIn(user){
   window.fbCurrentUser = user;
   hideAuthScreen();
-  addLogoutButton(user);
   showSyncIndicator('⏳ جاري تحميل بياناتك...');
 
   try {
-    const ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
-    const snap = await window.fbGetDoc(ref);
+    // 1) اقرأ وثيقة المستخدم لمعرفة الدور
+    const userRef = window.fbDoc(window.fbDb, 'users', user.uid);
+    let userSnap;
+    try {
+      userSnap = await window.fbGetDoc(userRef);
+    } catch(e) {
+      console.warn('Cannot read user doc:', e);
+      userSnap = { exists: () => false };
+    }
 
-    if(snap.exists() && snap.data().data){
-      const cloudData = snap.data().data;
-      const cloudCount = (cloudData.orders || []).length;
-      const localCount = state.orders.length;
+    let role = 'admin';
+    let pageId = null;
+    let pageName = null;
 
-      if(cloudCount > 0){
-        const wantCloud = confirm(
-          `☁️ بيانات محفوظة على السيرفر:\n\n` +
-          `• السيرفر: ${cloudCount} طلب\n` +
-          `• جهازك: ${localCount} طلب\n\n` +
-          `"موافق" = استخدام بيانات السيرفر\n` +
-          `"إلغاء" = رفع بيانات جهازك للسيرفر`
-        );
+    if(userSnap.exists && userSnap.exists()){
+      const data = userSnap.data();
+      role = data.role || 'admin';
+      pageId = data.pageId || null;
+      pageName = data.pageName || null;
+    } else {
+      // أول مستخدم = أدمن، أو مستخدم موجود في Auth بدون وثيقة
+      // نعتبره أدمن لو مفيش أي Admin موجود
+      // لكن الأبسط: نعتبره Admin ونحفظ وثيقة
+      role = 'admin';
+      try {
+        await window.fbSetDoc(userRef, {
+          email: user.email,
+          role: 'admin',
+          createdAt: new Date().toISOString()
+        });
+      } catch(e){ console.warn('Cannot write user doc:', e); }
+    }
 
-        if(wantCloud){
-          try { localStorage.setItem(KEY + '_backup_' + Date.now(), JSON.stringify(state)); } catch(e){}
+    window.currentRole = role;
+    window.currentPageId = pageId;
+    window.currentPageName = pageName;
+
+    // 2) تطبيق القيود
+    applyRoleRestrictions(role, pageId, pageName);
+    addUserBadge(user, role, pageName);
+
+    // 3) تحديد مصدر البيانات: الأدمن بيقرا من state/{main} بتاعه
+    //    المستخدم بيقرا من state/{main} بتاع الأدمن
+    let adminUid = user.uid;
+
+    if(role === 'page'){
+      // ندور على الأدمن (أول مستخدم بدور admin)
+      // بنستخدم بيانات الأدمن في state/users/{adminUid}/state/main
+      // لكن لأن كل مستخدم عنده صلاحية قراءة state بتاعه بس (Rules)،
+      // هنخلي كل الـ state يكون في مكان مشترك: shared/state/main
+      // حل بديل: نخلي الأدمن يخزن نسخته في مكان مشترك ونقرأه
+
+      // 💡 استخدام مسار مشترك:
+      // - الأدمن: users/{uid}/state/main (نسخته الخاصة)
+      // - كل الصفحات: shared/data/main (يقرا من مكان مشترك)
+      // الأدمن يحفظ في الاتنين
+      try {
+        const sharedRef = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+        const sharedSnap = await window.fbGetDoc(sharedRef);
+        if(sharedSnap.exists() && sharedSnap.data().data){
+          const cloudData = sharedSnap.data().data;
           state = cloudData;
           if(!Array.isArray(state.pages)) state.pages = [];
           if(!Array.isArray(state.orders)) state.orders = [];
@@ -2710,61 +2909,134 @@ async function onUserLoggedIn(user){
           });
           try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
           renderAll();
-          showSyncIndicator('✅ تم تحميل بيانات السيرفر', 2000);
-          toast('✅ تم تحميل بياناتك من السيرفر');
+          showSyncIndicator('✅ تم تحميل بيانات صفحتك', 2000);
         } else {
-          await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
-          showSyncIndicator('✅ تم رفع بياناتك', 2000);
-          toast('✅ تم رفع بياناتك للسيرفر');
+          showSyncIndicator('ℹ️ لا توجد بيانات على السيرفر', 2000);
         }
-      } else {
-        await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
-        showSyncIndicator('✅ تم رفع البيانات', 2000);
+      } catch(e) {
+        console.error('Cannot read shared data:', e);
+        showSyncIndicator('⚠️ تعذر تحميل البيانات', 2500);
       }
     } else {
-      await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
-      showSyncIndicator('✅ تم إنشاء نسخة على السيرفر', 2000);
+      // الأدمن: يحمل نسخته من state/users/{uid}/state/main
+      try {
+        const ownRef = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
+        const ownSnap = await window.fbGetDoc(ownRef);
+        if(ownSnap.exists() && ownSnap.data().data){
+          const cloudData = ownSnap.data().data;
+          const cloudCount = (cloudData.orders || []).length;
+          const localCount = state.orders.length;
+
+          if(cloudCount > 0 && localCount === 0){
+            state = cloudData;
+            if(!Array.isArray(state.pages)) state.pages = [];
+            if(!Array.isArray(state.orders)) state.orders = [];
+            state.pages.forEach(p => {
+              if(!Array.isArray(p.settlements)) p.settlements = [];
+              if(p.settledTotal === undefined) p.settledTotal = 0;
+            });
+            state.orders.forEach(o => {
+              if(o.settled === undefined) o.settled = false;
+              if(o.accountLocked === undefined) o.accountLocked = false;
+            });
+            try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+            renderAll();
+          }
+        }
+        // رفع البيانات المحلية للكلاود بعد كده
+        await syncToCloud();
+        // كمان حدّث النسخة المشتركة عشان الصفحات تشوفها
+        await syncToShared();
+      } catch(e){ console.warn('Admin load error:', e); }
     }
 
-    startRealtimeListener(user);
+    // إعادة رسم الواجهة بعد تحديد الدور
+    renderAll();
+    startRealtimeListener(user, role);
+    showSyncIndicator('✅ جاهز', 1200);
+
   } catch(err) {
-    console.error('Login sync error:', err);
-    showSyncIndicator('⚠️ خطأ في المزامنة', 3000);
+    console.error('Login error:', err);
+    showSyncIndicator('⚠️ خطأ في تحميل الحساب', 3000);
   }
 }
 
-let _realtimeUnsub = null;
-function startRealtimeListener(user){
-  if(_realtimeUnsub) return;
-  const ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
-  let first = true;
+// رفع نسخة مشتركة للأدمن عشان الصفحات تقرا منها
+async function syncToShared(){
+  if(window.currentRole !== 'admin') return;
+  if(!window.fbReady || !window.fbCurrentUser) return;
+  try {
+    const ref = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+    await window.fbSetDoc(ref, {
+      data: state,
+      updatedAt: new Date().toISOString(),
+      updatedBy: window.fbCurrentUser.uid
+    });
+  } catch(e) {
+    console.warn('Shared sync error:', e);
+  }
+}
 
+// نضيف استدعاء syncToShared لجوة syncToCloud
+const _origSyncToCloud = syncToCloud;
+syncToCloud = async function(){
+  if(!window.fbReady || !window.fbCurrentUser) return;
+  if(window.currentRole !== 'admin') return;
+  try {
+    const ref = window.fbDoc(window.fbDb, 'users', window.fbCurrentUser.uid, 'state', 'main');
+    await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
+    // نسخة مشتركة للصفحات
+    await syncToShared();
+    showSyncIndicator('☁️ تمت المزامنة', 1200);
+  } catch(err) {
+    console.error('Sync error:', err);
+    showSyncIndicator('⚠️ فشلت المزامنة', 2000);
+  }
+};
+
+let _realtimeUnsub = null;
+function startRealtimeListener(user, role){
+  if(_realtimeUnsub) return;
+
+  let ref;
+  if(role === 'admin'){
+    ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
+  } else {
+    ref = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+  }
+
+  let first = true;
   _realtimeUnsub = window.fbOnSnapshot(ref, (snap) => {
     if(!snap.exists()) return;
     if(first){ first = false; return; }
     const cloudData = snap.data().data;
     if(!cloudData) return;
+    // الأدمن: مايستقبلش تحديثات من نفسه
+    if(role === 'admin' && snap.data().updatedBy === user.uid) return;
     if(JSON.stringify(cloudData) === JSON.stringify(state)) return;
 
-    showSyncIndicator('🔄 تحديثات من جهاز تاني...', 1500);
+    showSyncIndicator('🔄 تحديثات جديدة...', 1200);
     setTimeout(() => {
       state = cloudData;
       try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
       renderAll();
-      toast('✅ تم تحديث البيانات');
-    }, 800);
-  }, (err) => console.warn('Realtime error:', err));
+    }, 500);
+  }, err => console.warn('Realtime error:', err));
 }
 
 function initFirebaseAuth(){
   if(!window.fbReady){
     console.warn('⚠️ Firebase غير جاهز');
-    showSyncIndicator('⚠️ بدون مزامنة - تحقق من الإعدادات', 4000);
+    showSyncIndicator('⚠️ بدون مزامنة', 3000);
     return;
   }
   window.fbOnAuth(window.fbAuth, (user) => {
     if(user) onUserLoggedIn(user);
-    else { window.fbCurrentUser = null; showAuthScreen(); }
+    else {
+      window.fbCurrentUser = null;
+      window.currentRole = null;
+      showAuthScreen();
+    }
   });
 }
 
