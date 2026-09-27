@@ -1185,8 +1185,22 @@ $('#gridTable').addEventListener('paste', e => {
   const looksLikeHeader = firstCells.some(c =>
     c.includes('كود الطلب') || c.includes('اسم العميل') || c.includes('اسم المول') || c.includes('المحمول'));
   if(looksLikeHeader && rows.length > 1) rows.shift();
-  const startRow = +td.dataset.row;
-  const startCol = +td.dataset.col;
+    let startRow = +td.dataset.row;
+  let startCol = +td.dataset.col;
+
+  // 🎯 كشف تلقائي: لو بادئ اللصق من عمود "كود الطلب" والبيانات مش فيها كود
+  if(startCol === 0 && rows.length){
+    const firstCell = rows[0].split('\t')[0].trim();
+    // لو أول خلية مش شكل كود (زي MIN-001) ومش رقم صافي = أغلب الظن اسمها
+    const looksLikeCode = /^[A-Z]{2,6}-\d+$/i.test(firstCell);
+    const looksLikeNumber = /^\d+$/.test(firstCell);
+    const looksLikeName = firstCell.length > 2 && !looksLikeCode && !looksLikeNumber;
+    if(looksLikeName){
+      startCol = 1;  // ← ابدأ من عمود "اسم العميل" تلقائياً
+      toast('🎯 تم رصد البيانات — بدأ اللصق من عمود "اسم العميل"');
+    }
+  }
+
   while(gridData.length < startRow + rows.length) gridData.push(newEmptyRow());
   let filled = 0;
   rows.forEach((rowText, ri) => {
