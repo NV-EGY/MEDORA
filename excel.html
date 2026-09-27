@@ -348,6 +348,54 @@ table.inv-tbl .c{text-align:center}
   body.bulk-printing #invoiceModal{display:none!important}
 }
 </style>
+
+<!-- ============================================================
+     🔥 Firebase SDK
+     ============================================================ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCL92zT2GyJEM1awmJ7ouS6TfaaRZKvofc",
+    authDomain: "medora-4d7ae.firebaseapp.com",
+    projectId: "medora-4d7ae",
+    storageBucket: "medora-4d7ae.firebasestorage.app",
+    messagingSenderId: "454112159901",
+    appId: "1:454112159901:web:abe06158f462cfbb4a8c74",
+    measurementId: "G-KKPM4D930B"
+  };
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window.fbApp = app;
+    window.fbAuth = auth;
+    window.fbDb = db;
+    window.fbDoc = doc;
+    window.fbSetDoc = setDoc;
+    window.fbGetDoc = getDoc;
+    window.fbOnSnapshot = onSnapshot;
+    window.fbSignIn = signInWithEmailAndPassword;
+    window.fbCreateUser = createUserWithEmailAndPassword;
+    window.fbSignOut = signOut;
+    window.fbOnAuth = onAuthStateChanged;
+    window.fbReady = true;
+    window.fbCurrentUser = null;
+
+    console.log('✅ Firebase initialized');
+    window.dispatchEvent(new Event('fb-ready'));
+  } catch(err) {
+    console.error('❌ Firebase init failed:', err);
+    window.fbReady = false;
+    window.dispatchEvent(new Event('fb-error'));
+  }
+</script>
 </head>
 <body>
 
@@ -856,9 +904,29 @@ function loadState(){
     });
     return s;
   };
-  try{ const raw = localStorage.getItem(KEY); const s = fix(raw && JSON.parse(raw)); if(s) return s; }catch(e){}
-  try{ const raw = localStorage.getItem('ordersSystem.v5'); const s = fix(raw && JSON.parse(raw)); if(s) return s; }catch(e){}
-  try{ const raw = localStorage.getItem('ordersSystem.v4'); const s = fix(raw && JSON.parse(raw)); if(s) return s; }catch(e){}
+
+  const tryKeys = [KEY, 'ordersSystem.v5', 'ordersSystem.v4'];
+  for(const k of tryKeys){
+    try {
+      const raw = localStorage.getItem(k);
+      if(!raw) continue;
+      const fixed = fix(JSON.parse(raw));
+      if(fixed){ console.log('✅ Loaded from:', k); return fixed; }
+    } catch(e) {
+      console.warn('⚠️ Corrupted:', k);
+      try { localStorage.setItem(k + '_corrupted_' + Date.now(), localStorage.getItem(k)); } catch(_){}
+    }
+  }
+
+  // بحث عن أي backup
+  try {
+    const bk = Object.keys(localStorage).find(k => k.startsWith(KEY + '_backup_'));
+    if(bk){
+      const s = fix(JSON.parse(localStorage.getItem(bk)));
+      if(s){ console.log('✅ Loaded from backup:', bk); return s; }
+    }
+  } catch(e){}
+
   return {
     pages:[
       mkPage('mina',''), mkPage('esam',''), mkPage('abo ghazala',''),
@@ -867,7 +935,31 @@ function loadState(){
     orders: []
   };
 }
-function saveState(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('⚠️ تعذر الحفظ'); } }
+function saveState(){
+  // 1) حفظ محلي فوري
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+  } catch(e) {
+    toast('⚠️ تعذر الحفظ المحلي - المساحة ممتلئة');
+  }
+  // 2) مزامنة مع السيرفر في الخلفية
+  syncToCloud();
+}
+
+async function syncToCloud(){
+  if(!window.fbReady || !window.fbCurrentUser) return;
+  try {
+    const ref = window.fbDoc(window.fbDb, 'users', window.fbCurrentUser.uid, 'state', 'main');
+    await window.fbSetDoc(ref, {
+      data: state,
+      updatedAt: new Date().toISOString()
+    });
+    showSyncIndicator('☁️ تمت المزامنة', 1500);
+  } catch(err) {
+    console.error('Sync error:', err);
+    showSyncIndicator('⚠️ فشلت المزامنة', 2500);
+  }
+}
 
 function peekCode(page){
   let n = page.next || 1, code;
@@ -2463,6 +2555,220 @@ document.addEventListener('keydown', e => {
 });
 
 /* =========================================================
+   🔥 FIREBASE AUTH & SYNC
+   ========================================================= */
+
+function showSyncIndicator(text, hideAfter){
+  let el = document.getElementById('syncIndicator');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'syncIndicator';
+    el.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 18px;border-radius:10px;font-size:12.5px;font-weight:800;z-index:5000;box-shadow:0 10px 24px -10px rgba(0,0,0,.6);opacity:0;transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.style.opacity = '1';
+  clearTimeout(el._tm);
+  if(hideAfter) el._tm = setTimeout(() => { el.style.opacity = '0'; }, hideAfter);
+}
+
+function showAuthScreen(){
+  if(document.getElementById('authOverlay')) return;
+
+  const html = `
+    <div id="authOverlay" style="position:fixed;inset:0;background:linear-gradient(135deg,#4f46e5,#9333ea);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;">
+      <div style="background:#fff;border-radius:20px;padding:36px 32px;max-width:420px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);animation:pop .35s ease;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:52px;margin-bottom:8px;">🔐</div>
+          <h2 style="font-size:22px;font-weight:900;color:#1e293b;">تسجيل الدخول</h2>
+          <p style="font-size:13px;color:#64748b;margin-top:6px;">سجّل دخولك لمزامنة البيانات بين الأجهزة</p>
+        </div>
+        <input id="authEmail" type="email" placeholder="📧 البريد الإلكتروني"
+          style="width:100%;font-family:inherit;font-size:14px;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:10px;outline:none;">
+        <input id="authPass" type="password" placeholder="🔑 كلمة المرور"
+          style="width:100%;font-family:inherit;font-size:14px;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:16px;outline:none;">
+        <button id="authLoginBtn" style="width:100%;background:#4f46e5;color:#fff;border:0;border-radius:10px;padding:13px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;">🔓 تسجيل الدخول</button>
+        <button id="authSignupBtn" style="width:100%;background:#f1f5f9;color:#475569;border:0;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">✨ إنشاء حساب جديد</button>
+        <div id="authMsg" style="font-size:12.5px;text-align:center;margin-top:14px;font-weight:700;min-height:18px;color:#dc2626;"></div>
+        <div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;line-height:1.7;">بياناتك محفوظة على السيرفر بشكل آمن<br>تقدر تدخل من أي جهاز</div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  const emailEl = document.getElementById('authEmail');
+  const passEl  = document.getElementById('authPass');
+  const msgEl   = document.getElementById('authMsg');
+  const showMsg = (text) => { msgEl.textContent = text; };
+
+  document.getElementById('authLoginBtn').onclick = async () => {
+    showMsg('');
+    const email = emailEl.value.trim(), pass = passEl.value;
+    if(!email || !pass){ showMsg('⚠️ اكتب البريد وكلمة المرور'); return; }
+    try { await window.fbSignIn(window.fbAuth, email, pass); }
+    catch(err) {
+      const msgs = {
+        'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+        'auth/user-not-found': 'المستخدم غير موجود',
+        'auth/wrong-password': 'كلمة المرور خطأ',
+        'auth/invalid-email': 'البريد غير صالح',
+        'auth/too-many-requests': 'محاولات كثيرة - استنى شوية'
+      };
+      showMsg('❌ ' + (msgs[err.code] || err.message));
+    }
+  };
+
+  document.getElementById('authSignupBtn').onclick = async () => {
+    showMsg('');
+    const email = emailEl.value.trim(), pass = passEl.value;
+    if(!email || !pass){ showMsg('⚠️ اكتب البريد وكلمة المرور'); return; }
+    if(pass.length < 6){ showMsg('⚠️ كلمة المرور لازم 6 حروف على الأقل'); return; }
+    try { await window.fbCreateUser(window.fbAuth, email, pass); }
+    catch(err) {
+      const msgs = {
+        'auth/email-already-in-use': 'البريد مستخدم بالفعل - جرب تسجيل الدخول',
+        'auth/weak-password': 'كلمة المرور ضعيفة',
+        'auth/invalid-email': 'البريد غير صالح'
+      };
+      showMsg('❌ ' + (msgs[err.code] || err.message));
+    }
+  };
+
+  passEl.addEventListener('keypress', e => { if(e.key === 'Enter') document.getElementById('authLoginBtn').click(); });
+  setTimeout(() => emailEl.focus(), 100);
+}
+
+function hideAuthScreen(){
+  const el = document.getElementById('authOverlay');
+  if(el) el.remove();
+}
+
+function addLogoutButton(user){
+  if(document.getElementById('logoutBtn')) return;
+  const topStats = document.querySelector('.top-stats');
+  if(!topStats) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+  const badge = document.createElement('span');
+  badge.style.cssText = 'font-size:11.5px;font-weight:700;opacity:.85;direction:ltr;';
+  badge.textContent = user.email || 'مستخدم';
+
+  const btn = document.createElement('button');
+  btn.id = 'logoutBtn';
+  btn.className = 'btn sm';
+  btn.style.cssText = 'background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);';
+  btn.innerHTML = '🚪 خروج';
+  btn.onclick = async () => {
+    if(!confirm('تسجيل الخروج؟\n\nبياناتك هتفضل محفوظة على السيرفر.')) return;
+    try { await window.fbSignOut(window.fbAuth); location.reload(); }
+    catch(err) { alert('خطأ: ' + err.message); }
+  };
+
+  wrapper.appendChild(badge);
+  wrapper.appendChild(btn);
+  topStats.appendChild(wrapper);
+}
+
+async function onUserLoggedIn(user){
+  window.fbCurrentUser = user;
+  hideAuthScreen();
+  addLogoutButton(user);
+  showSyncIndicator('⏳ جاري تحميل بياناتك...');
+
+  try {
+    const ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
+    const snap = await window.fbGetDoc(ref);
+
+    if(snap.exists() && snap.data().data){
+      const cloudData = snap.data().data;
+      const cloudCount = (cloudData.orders || []).length;
+      const localCount = state.orders.length;
+
+      if(cloudCount > 0){
+        const wantCloud = confirm(
+          `☁️ بيانات محفوظة على السيرفر:\n\n` +
+          `• السيرفر: ${cloudCount} طلب\n` +
+          `• جهازك: ${localCount} طلب\n\n` +
+          `"موافق" = استخدام بيانات السيرفر\n` +
+          `"إلغاء" = رفع بيانات جهازك للسيرفر`
+        );
+
+        if(wantCloud){
+          try { localStorage.setItem(KEY + '_backup_' + Date.now(), JSON.stringify(state)); } catch(e){}
+          state = cloudData;
+          if(!Array.isArray(state.pages)) state.pages = [];
+          if(!Array.isArray(state.orders)) state.orders = [];
+          state.pages.forEach(p => {
+            if(!Array.isArray(p.settlements)) p.settlements = [];
+            if(p.settledTotal === undefined) p.settledTotal = 0;
+          });
+          state.orders.forEach(o => {
+            if(o.settled === undefined) o.settled = false;
+            if(o.accountLocked === undefined) o.accountLocked = false;
+          });
+          try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+          renderAll();
+          showSyncIndicator('✅ تم تحميل بيانات السيرفر', 2000);
+          toast('✅ تم تحميل بياناتك من السيرفر');
+        } else {
+          await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
+          showSyncIndicator('✅ تم رفع بياناتك', 2000);
+          toast('✅ تم رفع بياناتك للسيرفر');
+        }
+      } else {
+        await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
+        showSyncIndicator('✅ تم رفع البيانات', 2000);
+      }
+    } else {
+      await window.fbSetDoc(ref, { data: state, updatedAt: new Date().toISOString() });
+      showSyncIndicator('✅ تم إنشاء نسخة على السيرفر', 2000);
+    }
+
+    startRealtimeListener(user);
+  } catch(err) {
+    console.error('Login sync error:', err);
+    showSyncIndicator('⚠️ خطأ في المزامنة', 3000);
+  }
+}
+
+let _realtimeUnsub = null;
+function startRealtimeListener(user){
+  if(_realtimeUnsub) return;
+  const ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
+  let first = true;
+
+  _realtimeUnsub = window.fbOnSnapshot(ref, (snap) => {
+    if(!snap.exists()) return;
+    if(first){ first = false; return; }
+    const cloudData = snap.data().data;
+    if(!cloudData) return;
+    if(JSON.stringify(cloudData) === JSON.stringify(state)) return;
+
+    showSyncIndicator('🔄 تحديثات من جهاز تاني...', 1500);
+    setTimeout(() => {
+      state = cloudData;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+      renderAll();
+      toast('✅ تم تحديث البيانات');
+    }, 800);
+  }, (err) => console.warn('Realtime error:', err));
+}
+
+function initFirebaseAuth(){
+  if(!window.fbReady){
+    console.warn('⚠️ Firebase غير جاهز');
+    showSyncIndicator('⚠️ بدون مزامنة - تحقق من الإعدادات', 4000);
+    return;
+  }
+  window.fbOnAuth(window.fbAuth, (user) => {
+    if(user) onUserLoggedIn(user);
+    else { window.fbCurrentUser = null; showAuthScreen(); }
+  });
+}
+
+/* =========================================================
    INIT
    ========================================================= */
 (function init(){
@@ -2474,6 +2780,12 @@ document.addEventListener('keydown', e => {
   addItemRow();
   recalc();
   renderAll();
+
+  if(window.fbReady) initFirebaseAuth();
+  else {
+    window.addEventListener('fb-ready', initFirebaseAuth);
+    window.addEventListener('fb-error', () => showSyncIndicator('❌ فشل Firebase', 4000));
+  }
 })();
 </script>
 </body>
