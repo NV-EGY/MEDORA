@@ -131,6 +131,34 @@ td.row-del button{border:0;background:transparent;color:#cbd5e1;cursor:pointer;f
 td.row-del button:hover{background:#fee2e2;color:#b91c1c}
 td.cell-multi{background:#f0fdf4!important}
 td.cell-multi:focus{background:#dcfce7!important}
+/* EXCEL-LIKE SELECTION */
+table.excel-grid td.cell-selected{
+  background:#dbeafe!important;
+  box-shadow:inset 0 0 0 1px #93c5fd;
+}
+table.excel-grid td.cell-active{
+  background:#bfdbfe!important;
+  box-shadow:inset 0 0 0 2px #1d4ed8!important;
+  z-index:20;
+  position:relative;
+}
+table.excel-grid td.cell-cut{
+  opacity:.45;
+  background:#fee2e2!important;
+  box-shadow:inset 0 0 0 2px #dc2626!important;
+}
+body.dragging-cells,
+body.dragging-cells #gridBody td[contenteditable]{
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  cursor:cell!important;
+}
+body.dragging-cells #gridBody td[contenteditable]:focus{
+  box-shadow:inset 0 0 0 1px #93c5fd!important;
+  background:#dbeafe!important;
+  white-space:nowrap;
+  overflow:hidden;
+}
 
 /* FORM */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
@@ -353,7 +381,7 @@ table.inv-tbl .c{text-align:center}
      🔥 Firebase SDK
      ============================================================ -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, onSnapshot } 
@@ -375,8 +403,14 @@ table.inv-tbl .c{text-align:center}
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // تطبيق ثانوي (لإنشاء مستخدمين جدد بدون تسجيل خروج الأدمن)
-    const secondaryApp = initializeApp(firebaseConfig, 'Secondary');
+        // تطبيق ثانوي (لإنشاء مستخدمين جدد بدون تسجيل خروج الأدمن)
+    let secondaryApp;
+    try {
+      const existing = getApps().find(a => a.name === 'Secondary');
+      secondaryApp = existing || initializeApp(firebaseConfig, 'Secondary');
+    } catch(e) {
+      secondaryApp = initializeApp(firebaseConfig, 'Secondary');
+    }
     const secondaryAuth = getAuth(secondaryApp);
 
     window.fbApp = app;
@@ -1210,6 +1244,288 @@ $('#templateBtn').addEventListener('click', () => {
   exportToExcel('قالب-فارغ-' + todayISO(), buildExcelTable(headers, rows));
   toast('📋 تم تحميل القالب الفارغ');
 });
+
+/* =========================================================
+   EXCEL-LIKE SELECTION + CLIPBOARD + UNDO/REDO
+   ========================================================= */
+let dragStart = null;
+let dragEnd = null;
+let isDragging = false;
+let clipboard = null;           // { data, w, h }
+let clipboardMode = null;       // 'copy' | 'cut'
+let clipboardSourceRange = null;
+let undoStack = [];
+let redoStack = [];
+const UNDO_LIMIT = 60;
+let cellFocusSnapshot = null;
+
+function snapshotGrid(){ return JSON.stringify(gridData); }
+
+function pushUndoSnapshot(snap){
+  const s = snap || snapshotGrid();
+  if(undoStack.length && undoStack[undoStack.length-1] === s) return;
+  undoStack.push(s);
+  if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function applySnapshot(json){
+  const arr = JSON.parse(json);
+  while(arr.length < 20) arr.push(newEmptyRow());
+  gridData = arr;
+  renderGrid();
+}
+
+function doUndo(){
+  if(!undoStack.length){ toast('⚠️ لا يوجد شيء للتراجع عنه'); return; }
+  redoStack.push(snapshotGrid());
+  applySnapshot(undoStack.pop());
+  clearSelectionHighlight();
+  dragStart = null; dragEnd = null;
+  toast('↩️ تم التراجع');
+}
+
+function doRedo(){
+  if(!redoStack.length){ toast('⚠️ لا يوجد شيء للأمام'); return; }
+  undoStack.push(snapshotGrid());
+  applySnapshot(redoStack.pop());
+  clearSelectionHighlight();
+  dragStart = null; dragEnd = null;
+  toast('↪️ تم التقدّم');
+}
+
+function getCellEl(r, c){
+  return document.querySelector(`#gridBody td[data-row="${r}"][data-col="${c}"]`);
+}
+function isAutoCell(c){
+  const k = GRID_COLS[c] && GRID_COLS[c].key;
+  return k === 'total' || k === 'code' || k === 'pagePhone';
+}
+function normalizeRange(r1,c1,r2,c2){
+  return {
+    r1: Math.min(r1,r2), c1: Math.min(c1,c2),
+    r2: Math.max(r1,r2), c2: Math.max(c1,c2)
+  };
+}
+function clearSelectionHighlight(){
+  document.querySelectorAll('#gridBody td.cell-selected, #gridBody td.cell-active, #gridBody td.cell-cut')
+    .forEach(el => el.classList.remove('cell-selected','cell-active','cell-cut'));
+}
+function highlightSelection(){
+  clearSelectionHighlight();
+  if(!dragStart || !dragEnd) return;
+  const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
+  for(let r = r1; r <= r2; r++){
+    for(let c = c1; c <= c2; c++){
+      const el = getCellEl(r, c);
+      if(el) el.classList.add('cell-selected');
+    }
+  }
+  const activeEl = getCellEl(dragStart.r, dragStart.c);
+  if(activeEl) activeEl.classList.add('cell-active');
+}
+function getActiveCell(){
+  const el = document.activeElement;
+  if(el && el.matches && el.matches('#gridBody td[contenteditable]')){
+    return { r: +el.dataset.row, c: +el.dataset.col, el };
+  }
+  return null;
+}
+
+// -------- Mouse drag selection --------
+$('#gridBody').addEventListener('mousedown', e => {
+  const td = e.target.closest('td[contenteditable]');
+  if(!td) return;
+  // لا تحدد أعمدة الـ auto
+  const c = +td.dataset.col;
+  if(isAutoCell(c)) return;
+  clearSelectionHighlight();
+  dragStart = { r: +td.dataset.row, c };
+  dragEnd = { ...dragStart };
+  isDragging = true;
+});
+
+document.addEventListener('mousemove', e => {
+  if(!isDragging) return;
+  document.body.classList.add('dragging-cells');
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if(!el) return;
+  const td = el.closest && el.closest('#gridBody td[contenteditable]');
+  if(!td) return;
+  const r = +td.dataset.row, c = +td.dataset.col;
+  if(isAutoCell(c)) return;
+  if(dragEnd.r !== r || dragEnd.c !== c){
+    dragEnd = { r, c };
+    highlightSelection();
+    // امنع التمرير الافتراضي
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('mouseup', e => {
+  if(!isDragging) return;
+  isDragging = false;
+  document.body.classList.remove('dragging-cells');
+
+  if(dragStart && dragEnd && dragStart.r === dragEnd.r && dragStart.c === dragEnd.c){
+    // ضغطة واحدة — اسمح بالتعديل العادي
+    clearSelectionHighlight();
+    dragStart = null; dragEnd = null;
+  } else {
+    // تحديد متعدد — امنع نص
+    try { window.getSelection()?.removeAllRanges(); } catch(_){}
+    highlightSelection();
+  }
+});
+
+// -------- Copy / Cut / Paste / Delete --------
+function copySelection(isCut){
+  if(!dragStart || !dragEnd) return;
+  const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
+  const data = [];
+  for(let r = r1; r <= r2; r++){
+    const row = [];
+    for(let c = c1; c <= c2; c++){
+      row.push(gridData[r] ? (gridData[r][c] || '') : '');
+    }
+    data.push(row);
+  }
+  clipboard = { data, w: c2-c1+1, h: r2-r1+1 };
+  clipboardMode = isCut ? 'cut' : 'copy';
+  clipboardSourceRange = { r1, c1, r2, c2 };
+
+  clearSelectionHighlight();
+  const src = clipboardSourceRange;
+  for(let r = src.r1; r <= src.r2; r++){
+    for(let c = src.c1; c <= src.c2; c++){
+      const el = getCellEl(r, c);
+      if(el) el.classList.add(isCut ? 'cell-cut' : 'cell-selected');
+    }
+  }
+  const activeEl = getCellEl(dragStart.r, dragStart.c);
+  if(activeEl && !isCut) activeEl.classList.add('cell-active');
+
+  toast(isCut ? `✂️ تم قص ${clipboard.h}×${clipboard.w}` : `📋 تم نسخ ${clipboard.h}×${clipboard.w}`);
+}
+
+function pasteClipboard(targetR, targetC){
+  if(!clipboard) return;
+  pushUndoSnapshot();
+  const { data, w, h } = clipboard;
+
+  while(gridData.length < targetR + h) gridData.push(newEmptyRow());
+
+  for(let i = 0; i < h; i++){
+    for(let j = 0; j < w; j++){
+      const r = targetR + i, c = targetC + j;
+      if(r >= gridData.length || c >= COLS) continue;
+      if(isAutoCell(c)) continue;
+      gridData[r][c] = data[i][j] || '';
+    }
+  }
+
+  if(clipboardMode === 'cut' && clipboardSourceRange){
+    const src = clipboardSourceRange;
+    for(let r = src.r1; r <= src.r2; r++){
+      for(let c = src.c1; c <= src.c2; c++){
+        if(isAutoCell(c)) continue;
+        const inside = r >= targetR && r < targetR + h && c >= targetC && c < targetC + w;
+        if(!inside && gridData[r]) gridData[r][c] = '';
+      }
+    }
+    clipboardMode = 'copy';
+    clipboardSourceRange = null;
+  }
+
+  renderGrid();
+  toast('📌 تم اللصق');
+}
+
+function deleteSelection(){
+  if(!dragStart || !dragEnd) return;
+  pushUndoSnapshot();
+  const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
+  let count = 0;
+  for(let r = r1; r <= r2; r++){
+    for(let c = c1; c <= c2; c++){
+      if(isAutoCell(c)) continue;
+      if(gridData[r]){ gridData[r][c] = ''; count++; }
+    }
+  }
+  renderGrid();
+  highlightSelection();
+  toast(`🗑️ تم حذف ${count} خلية`);
+}
+
+// -------- Keyboard shortcuts --------
+document.addEventListener('keydown', e => {
+  // تجاهل لو في input عادي خارج الجدول
+  const tag = (e.target.tagName || '').toLowerCase();
+  const inGrid = e.target.matches && e.target.matches('#gridBody td[contenteditable]');
+  const inFormInput = (tag === 'input' || tag === 'textarea' || tag === 'select') && !inGrid;
+
+  // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+  if((e.ctrlKey || e.metaKey) && !inFormInput && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')){
+    if(e.key === 'y' || e.key === 'Y' || (e.key === 'z' && e.shiftKey)){
+      e.preventDefault(); doRedo(); return;
+    } else {
+      e.preventDefault(); doUndo(); return;
+    }
+  }
+
+  const hasSel = dragStart && dragEnd &&
+                 !(dragStart.r === dragEnd.r && dragStart.c === dragEnd.c);
+  const active = getActiveCell();
+
+  // Ctrl+C
+  if((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')){
+    if(hasSel){ e.preventDefault(); copySelection(false); return; }
+  }
+  // Ctrl+X
+  if((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')){
+    if(hasSel){ e.preventDefault(); copySelection(true); return; }
+  }
+  // Ctrl+V — امنع لو إحنا في خلية ومفيش clipboard
+  if((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')){
+    if(clipboard && (active || hasSel)){
+      e.preventDefault();
+      const t = active ? { r: active.r, c: active.c } : { r: dragStart.r, c: dragStart.c };
+      pasteClipboard(t.r, t.c);
+      return;
+    }
+  }
+  // Delete / Backspace
+  if((e.key === 'Delete' || e.key === 'Backspace') && hasSel){
+    e.preventDefault();
+    deleteSelection();
+    return;
+  }
+  // Escape — امسح التحديد
+  if(e.key === 'Escape'){
+    if(dragStart || dragEnd){
+      clearSelectionHighlight();
+      dragStart = null; dragEnd = null;
+    }
+  }
+});
+
+// -------- Undo on cell edit (focus-based) --------
+$('#gridBody').addEventListener('focusin', e => {
+  if(!e.target.matches('td[contenteditable]')) return;
+  cellFocusSnapshot = snapshotGrid();
+});
+$('#gridBody').addEventListener('focusout', e => {
+  if(!e.target.matches('td[contenteditable]')) return;
+  const cur = snapshotGrid();
+  if(cellFocusSnapshot && cellFocusSnapshot !== cur){
+    pushUndoSnapshot(cellFocusSnapshot);
+  }
+  cellFocusSnapshot = null;
+});
+
+// -------- Ctrl+V: لصق من الكليبورد الخارجي (Excel) --------
+// (موجود بالفعل في paste handler — لا نحتاج تكراره)
+
 
 /* =========================================================
    SAVE ALL FROM GRID
@@ -2218,37 +2534,106 @@ function renderPages(){
     const totalSales = totalSalesOfPage(p.id);
     const settled = settledTotalOfPage(p.id);
     const profitClass = profit > 0 ? 'profit-pos' : 'profit-zero';
+    const isEditing = (window._editingPageId === p.id);
+    const ro = isEditing ? '' : 'readonly';
+    const roStyle = isEditing ? '' : 'background:transparent;border-color:transparent;cursor:default;';
     return `
-    <tr>
-      <td><input class="page-inp" data-pid="${p.id}" data-field="name" value="${esc(p.name)}"></td>
-      <td><input class="page-inp" data-pid="${p.id}" data-field="prefix" value="${esc(p.prefix)}" dir="ltr" style="max-width:90px"></td>
-      <td><input class="page-inp" data-pid="${p.id}" data-field="phone" value="${esc(p.phone)}" dir="ltr" placeholder="—"></td>
+    <tr data-page-row="${p.id}" class="${isEditing?'editing-page':''}">
+      <td><input class="page-inp" data-pid="${p.id}" data-field="name" value="${esc(p.name)}" ${ro} style="${roStyle}"></td>
+      <td><input class="page-inp" data-pid="${p.id}" data-field="prefix" value="${esc(p.prefix)}" dir="ltr" ${ro} style="max-width:90px;${roStyle}"></td>
+      <td><input class="page-inp" data-pid="${p.id}" data-field="phone" value="${esc(p.phone)}" dir="ltr" placeholder="—" ${ro} style="${roStyle}"></td>
       <td><span class="code">${esc(p.prefix)}-${String(p.next||1).padStart(3,'0')}</span></td>
       <td><b>${orderCountOfPage(p.id)}</b></td>
       <td class="profit-total">${money(totalSales)} ج.م</td>
       <td class="profit-settled">${money(settled)} ج.م</td>
       <td><span class="${profitClass}">${money(profit)} ج.م</span></td>
       <td>
-        <button class="mini settle" data-settle-page="${p.id}" title="تسوية الربح الحالي">💰 تسوية</button>
-        <button class="mini inv" data-history-page="${p.id}" title="سجل التسويات">📜</button>
-        <button class="mini no" data-delpage="${p.id}">🗑</button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          ${isEditing ? `
+            <button class="mini ok" data-save-page="${p.id}" title="حفظ">✅ حفظ</button>
+            <button class="mini rm" data-cancel-page="${p.id}" title="إلغاء">✕ إلغاء</button>
+          ` : `
+            <button class="mini view" data-edit-page="${p.id}" title="تعديل">✏️ تعديل</button>
+            <button class="mini settle" data-settle-page="${p.id}" title="تسوية">💰</button>
+            <button class="mini inv" data-history-page="${p.id}" title="سجل">📜</button>
+            <button class="mini no" data-delpage="${p.id}">🗑</button>
+          `}
+        </div>
       </td>
     </tr>`;
   }).join('');
 }
-$('#pagesBody').addEventListener('change', e => {
-  const inp = e.target.closest('.page-inp'); if(!inp) return;
-  const p = state.pages.find(x => x.id === inp.dataset.pid); if(!p) return;
-  const field = inp.dataset.field;
-  let val = inp.value.trim();
-  if(field === 'prefix'){ val = (val || prefixOf(p.name)).toUpperCase().replace(/[^A-Za-z0-9\u0600-\u06FF]/g,'').slice(0,6); inp.value = val; }
-  if(field === 'phone'){ val = normalizePhone(val); inp.value = val; }
-  if(field === 'name' && !val){ inp.value = p.name; return; }
-  p[field] = val;
-  if(field === 'name' && !p.prefix) p.prefix = prefixOf(val);
-  saveState(); renderAll();
-});
+window._editingPageId = null;
+window._editingPageBackup = null;
+
 $('#pagesBody').addEventListener('click', e => {
+  // ✏️ تعديل
+  const editBtn = e.target.closest('[data-edit-page]');
+  if(editBtn){
+    const id = editBtn.dataset.editPage;
+    const p = state.pages.find(x => x.id === id);
+    if(!p) return;
+    window._editingPageId = id;
+    window._editingPageBackup = { name: p.name, prefix: p.prefix, phone: p.phone };
+    renderPages();
+    // focus أول input
+    setTimeout(() => {
+      const inp = document.querySelector(`.page-inp[data-pid="${id}"][data-field="name"]`);
+      if(inp){ inp.focus(); inp.select(); }
+    }, 50);
+    return;
+  }
+
+  // ✅ حفظ
+  const saveBtn = e.target.closest('[data-save-page]');
+  if(saveBtn){
+    const id = saveBtn.dataset.savePage;
+    const p = state.pages.find(x => x.id === id);
+    if(!p) return;
+
+    const nameInp = document.querySelector(`.page-inp[data-pid="${id}"][data-field="name"]`);
+    const prefixInp = document.querySelector(`.page-inp[data-pid="${id}"][data-field="prefix"]`);
+    const phoneInp = document.querySelector(`.page-inp[data-pid="${id}"][data-field="phone"]`);
+
+    let name = (nameInp?.value || '').trim();
+    let prefix = (prefixInp?.value || '').trim();
+    let phone = normalizePhone(phoneInp?.value || '');
+
+    if(!name){ toast('⚠️ اسم الصفحة مطلوب'); return; }
+    if(state.pages.some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())){
+      toast('⚠️ اسم الصفحة موجود بالفعل'); return;
+    }
+    prefix = (prefix || prefixOf(name)).toUpperCase().replace(/[^A-Za-z0-9\u0600-\u06FF]/g,'').slice(0,6);
+
+    p.name = name;
+    p.prefix = prefix;
+    p.phone = phone;
+
+    window._editingPageId = null;
+    window._editingPageBackup = null;
+    saveState(); renderAll();
+    toast('✅ تم حفظ التعديلات');
+    return;
+  }
+
+  // ✕ إلغاء
+  const cancelBtn = e.target.closest('[data-cancel-page]');
+  if(cancelBtn){
+    const id = cancelBtn.dataset.cancelPage;
+    const p = state.pages.find(x => x.id === id);
+    if(p && window._editingPageBackup){
+      p.name = window._editingPageBackup.name;
+      p.prefix = window._editingPageBackup.prefix;
+      p.phone = window._editingPageBackup.phone;
+    }
+    window._editingPageId = null;
+    window._editingPageBackup = null;
+    renderPages();
+    toast('↩️ تم الإلغاء');
+    return;
+  }
+
+  // 💰 تسوية
   const settleBtn = e.target.closest('[data-settle-page]');
   if(settleBtn){
     const pageId = settleBtn.dataset.settlePage;
@@ -2257,8 +2642,12 @@ $('#pagesBody').addEventListener('click', e => {
     openSettlementModal(unsettled.map(o=>o.id));
     return;
   }
+
+  // 📜 سجل
   const histBtn = e.target.closest('[data-history-page]');
   if(histBtn){ showHistory(histBtn.dataset.historyPage); return; }
+
+  // 🗑 حذف
   const delBtn = e.target.closest('[data-delpage]');
   if(delBtn){
     const id = delBtn.dataset.delpage;
@@ -2267,8 +2656,21 @@ $('#pagesBody').addEventListener('click', e => {
     if(!confirm(`حذف الصفحة "${p.name}"؟${cnt?`\nتنبيه: بها ${cnt} طلب — سيتم حذفهم أيضاً.`:''}`)) return;
     state.pages = state.pages.filter(x => x.id !== id);
     state.orders = state.orders.filter(o => o.pageId !== id);
+    if(window._editingPageId === id){ window._editingPageId = null; window._editingPageBackup = null; }
     saveState(); renderAll(); toast('🗑 تم حذف الصفحة');
     return;
+  }
+});
+
+// منع التعديل لو مش في وضع التعديل
+$('#pagesBody').addEventListener('input', e => {
+  const inp = e.target.closest('.page-inp');
+  if(!inp) return;
+  const pid = inp.dataset.pid;
+  if(window._editingPageId !== pid){
+    // ارجع القيمة الأصلية
+    const p = state.pages.find(x => x.id === pid);
+    if(p) inp.value = p[inp.dataset.field] || '';
   }
 });
 
@@ -2441,11 +2843,7 @@ $('#exportReportBtn').addEventListener('click', () => {
    PAGES: ADD NEW
    ========================================================= */
 $('#addPageBtn').addEventListener('click', async () => {
-  // الأدمن فقط يقدر ينشئ صفحات
-  if(window.currentRole !== 'admin'){
-    toast('⚠️ غير مسموح');
-    return;
-  }
+  if(window.currentRole !== 'admin'){ toast('⚠️ غير مسموح'); return; }
 
   const name = $('#npName').value.trim();
   const email = $('#npEmail').value.trim();
@@ -2454,25 +2852,26 @@ $('#addPageBtn').addEventListener('click', async () => {
   if(!name){ toast('⚠️ اكتب اسم الصفحة'); $('#npName').focus(); return; }
   if(state.pages.some(p => p.name.toLowerCase() === name.toLowerCase())){ toast('⚠️ اسم الصفحة موجود بالفعل'); return; }
   if(!email){ toast('⚠️ اكتب إيميل الصفحة'); $('#npEmail').focus(); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('⚠️ صيغة الإيميل غير صحيحة'); $('#npEmail').focus(); return; }
   if(!password || password.length < 6){ toast('⚠️ كلمة المرور 6 حروف على الأقل'); $('#npPassword').focus(); return; }
+  if(!window.fbReady){ toast('❌ Firebase غير جاهز'); return; }
+  if(!window.fbSecondaryAuth){ toast('❌ Firebase Secondary غير مهيأ'); return; }
 
   const prefix = ($('#npPrefix').value.trim() || prefixOf(name)).toUpperCase().slice(0,6);
   const phone = normalizePhone($('#npPhone').value);
-
-  // إنشاء الصفحة في الحالة
   const newPage = mkPage(name, phone, prefix, 1, email);
-  state.pages.push(newPage);
 
   const btn = $('#addPageBtn');
   btn.disabled = true;
+  const originalText = btn.textContent;
   btn.textContent = '⏳ جاري الإنشاء...';
 
   try {
-    // إنشاء حساب Firebase للصفحة عبر التطبيق الثانوي (بدون تسجيل خروج الأدمن)
+    console.log('🔥 Creating user:', email);
     const cred = await window.fbCreateUser(window.fbSecondaryAuth, email, password);
     const newUid = cred.user.uid;
+    console.log('✅ Firebase user created:', newUid);
 
-    // حفظ وثيقة المستخدم مع دوره
     await window.fbSetDoc(window.fbDoc(window.fbDb, 'users', newUid), {
       email: email,
       role: 'page',
@@ -2481,32 +2880,43 @@ $('#addPageBtn').addEventListener('click', async () => {
       createdAt: new Date().toISOString()
     });
 
-    // تسجيل خروج المستخدم الجديد من التطبيق الثانوي
-    await window.fbSignOut(window.fbSecondaryAuth);
+    state.pages.push(newPage);
 
-    // حفظ محلياً + السيرفر
+    try { await window.fbSignOut(window.fbSecondaryAuth); } catch(e){ console.warn('signout warn:', e); }
+
     saveState(); renderAll();
+
     $('#npName').value=''; $('#npPhone').value=''; $('#npPrefix').value='';
     $('#npEmail').value=''; $('#npPassword').value='';
     delete $('#npPrefix').dataset.touched;
 
     toast('✅ تم إنشاء الصفحة وحساب الدخول بنجاح');
   } catch(err) {
-    console.error('Page create error:', err);
-    // حذف الصفحة من الحالة لو فشل إنشاء الحساب
-    state.pages = state.pages.filter(p => p.id !== newPage.id);
+    console.error('❌ Page create error:', err);
+    console.error('Code:', err.code);
+    console.error('Message:', err.message);
 
     const msgs = {
-      'auth/email-already-in-use': 'الإيميل مستخدم بالفعل',
-      'auth/invalid-email': 'الإيميل غير صالح',
-      'auth/weak-password': 'كلمة المرور ضعيفة'
+      'auth/email-already-in-use': 'هذا الإيميل مستخدم بالفعل — جرّب إيميل تاني',
+      'auth/invalid-email': 'صيغة الإيميل غير صحيحة',
+      'auth/weak-password': 'كلمة المرور ضعيفة — لازم 6 حروف على الأقل',
+      'auth/operation-not-allowed': '⚠️ لازم تفعّل "Email/Password" في Firebase Console → Authentication → Sign-in method',
+      'auth/network-request-failed': 'مشكلة في الاتصال بالإنترنت',
+      'auth/too-many-requests': 'محاولات كثيرة — استنى شوية',
+      'auth/unauthorized-domain': 'الدومين غير مصرح به في Firebase → Authentication → Settings → Authorized domains',
+      'auth/configuration-not-found': 'إعدادات Firebase غير مكتملة',
+      'auth/app-not-authorized': 'التطبيق غير مصرح له',
+      'auth/api-key-not-valid': 'مفتاح API غير صالح'
     };
-    alert('❌ فشل إنشاء الحساب:\n' + (msgs[err.code] || err.message));
+
+       const msg = msgs[err.code] || (err.message || 'خطأ غير معروف');
+    alert(`❌ فشل إنشاء الحساب\n\nالكود: ${err.code || '—'}\n\nالسبب: ${msg}\n\nتأكد من:\n• تفعيل Email/Password في Firebase Console\n• إضافة الدومين في Authorized domains`);
   } finally {
     btn.disabled = false;
-    btn.textContent = '➕ إضافة';
+    btn.textContent = originalText;
   }
 });
+
 $('#npName').addEventListener('input', e => {
   if(!$('#npPrefix').dataset.touched) $('#npPrefix').value = prefixOf(e.target.value);
 });
