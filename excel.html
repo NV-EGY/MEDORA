@@ -491,6 +491,7 @@ table.inv-tbl .c{text-align:center}
       <button class="tab" data-view="delivered">✅ التسليمات <span class="badge" id="bgDelivered">0</span></button>
       <button class="tab" data-view="cancelled">🚫 الملغيين <span class="badge" id="bgCancelled">0</span></button>
       <button class="tab" data-view="pages">⚙️ الصفحات</button>
+<button class="tab" data-view="profits" id="tab-profits" style="display:none">💰 أرباحي</button>
     </nav>
   </div>
 
@@ -614,7 +615,6 @@ table.inv-tbl .c{text-align:center}
       </div>
       <div class="bulk-bar" id="bulk-pending">
         <span class="cnt"><b id="bulk-count-pending">0</b> محدد</span>
-        <span class="sum" id="bulk-sum-pending" style="display:none">الإجمالي: <b>0</b> ج.م</span>
         <button class="btn green sm" data-bulk="deliver">✅ تسليم المحدد</button>
         <button class="btn red sm" data-bulk="cancel">🚫 إلغاء المحدد</button>
         <button class="btn primary sm" data-bulk="print">🖨️ طباعة المحدد</button>
@@ -649,7 +649,6 @@ table.inv-tbl .c{text-align:center}
       </div>
       <div class="bulk-bar" id="bulk-delivered">
         <span class="cnt"><b id="bulk-count-delivered">0</b> محدد</span>
-        <span class="sum" id="bulk-sum-delivered" style="display:none">الإجمالي: <b>0</b> ج.م</span>
         <button class="btn green sm" data-bulk="settle">💰 تسوية المحدد</button>
         <button class="btn primary sm" data-bulk="print">🖨️ طباعة المحدد</button>
         <button class="btn amber sm" data-bulk="restore">↩ استرجاع المحدد</button>
@@ -685,7 +684,6 @@ table.inv-tbl .c{text-align:center}
       </div>
       <div class="bulk-bar" id="bulk-cancelled">
         <span class="cnt"><b id="bulk-count-cancelled">0</b> محدد</span>
-        <span class="sum" id="bulk-sum-cancelled" style="display:none">الإجمالي: <b>0</b> ج.م</span>
         <button class="btn green sm" data-bulk="settle">💰 تسوية المحدد</button>
         <button class="btn primary sm" data-bulk="print">🖨️ طباعة المحدد</button>
         <button class="btn amber sm" data-bulk="restore">↩ استرجاع المحدد</button>
@@ -704,6 +702,16 @@ table.inv-tbl .c{text-align:center}
         </table>
       </div>
       <div class="empty" id="empty-cancelled" style="display:none"><span class="ico">🚫</span>لا توجد طلبات ملغية</div>
+    </div>
+  </section>
+
+      <!-- MY PROFITS (for page users) -->
+  <section class="view" id="view-profits">
+    <div class="card">
+      <div class="card-head">
+        <h3>💰 أرباحي</h3>
+      </div>
+      <div id="myProfitBody"></div>
     </div>
   </section>
 
@@ -728,13 +736,13 @@ table.inv-tbl .c{text-align:center}
       <div class="table-wrap">
         <table class="tbl" style="min-width:1100px">
           <thead><tr>
-            <th>اسم الصفحة</th><th>البادئة</th><th>التليفون</th><th>الكود التالي</th>
-            <th>الطلبات</th>
-            <th>إجمالي المبيعات</th>
-            <th>المُسوّى سابقاً</th>
-            <th>الربح الحالي</th>
-            <th>إجراءات</th>
-          </tr></thead>
+  <th>اسم الصفحة</th><th>البادئة</th><th>التليفون</th><th>الكود التالي</th>
+  <th>الطلبات المُسوّاة</th>
+  <th>إجمالي التسويات</th>
+  <th>آخر تسوية</th>
+  <th>الربح الحالي</th>
+  <th>إجراءات</th>
+</tr></thead>
           <tbody id="pagesBody"></tbody>
         </table>
       </div>
@@ -817,6 +825,20 @@ table.inv-tbl .c{text-align:center}
   </div>
 </div>
 
+<!-- SETTLEMENT DETAILS MODAL -->
+<div class="modal" id="settleDetailModal">
+  <div class="modal-inner" style="max-width:900px">
+    <div class="modal-bar">
+      <h3 id="settleDetailTitle">📋 تفاصيل التسوية</h3>
+      <button class="modal-x" data-close-settle-detail>✕</button>
+    </div>
+    <div style="padding:18px;max-height:72vh;overflow-y:auto" id="settleDetailBody"></div>
+    <div class="modal-actions">
+      <button class="btn grey" data-close-settle-detail>إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW ORDER MODAL -->
 <div class="modal" id="viewModal">
   <div class="modal-inner" style="max-width:820px">
@@ -859,7 +881,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const AR_DAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 function todayISO(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 function dayFromISO(iso){ if(!iso) return ''; const d=new Date(iso+'T00:00:00'); return isNaN(d)?'':(AR_DAYS[d.getDay()]||''); }
-function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function fmtDate(iso){
+  if(!iso) return '—';
+  const datePart = String(iso).slice(0,10);
+  const [y,m,d] = datePart.split('-');
+  if(!y || !m || !d) return '—';
+  return `${d}/${m}/${y}`;
+}
 function prefixOf(name){
   const c = String(name||'').trim().replace(/\s+/g,'').replace(/^[^A-Za-z\u0600-\u06FF]+/,'');
   return (c.slice(0,3) || 'ORD').toUpperCase();
@@ -883,9 +911,9 @@ function splitMulti(v){
   return String(v||'').split(/\s+-\s+/).map(s => s.trim()).filter(s => s !== '');
 }
 function buildItemsFromRow(row){
-  const names  = splitMulti(row[13]);
-  const qtys   = splitMulti(row[14]).map(num);
-  const prices = splitMulti(row[15]).map(num);
+  const names  = splitMulti(row[11]);
+  const qtys   = splitMulti(row[12]).map(num);
+  const prices = splitMulti(row[13]).map(num);
   if(!names.length) return [];
   const lastQ = qtys[qtys.length-1];
   const lastP = prices[prices.length-1];
@@ -1071,33 +1099,25 @@ $$('.tab').forEach(tab => tab.addEventListener('click', () => {
    GRID
    ========================================================= */
 const GRID_COLS = [
-  { key:'code',      label:'كود الطلب',        w:100, ph:'تلقائي' },
-  { key:'name',      label:'اسم العميل',       w:140, ph:'الاسم' },
-  { key:'mobile',    label:'المحمول',          w:130, ph:'011xxxxxxxx' },
-  { key:'phone',     label:'التليفون',         w:120, ph:'أرضي' },
-  { key:'gov',       label:'المحافظة',         w:90,  ph:'القاهرة' },
-  { key:'area',      label:'المنطقة',          w:110, ph:'المنطقة' },
-  { key:'address',   label:'العنوان',          w:240, ph:'العنوان بالتفصيل' },
-  { key:'note',      label:'البيان',           w:170, ph:'ملاحظات' },
-  { key:'day',       label:'اليوم',            w:75,  ph:'السبت' },
-  { key:'d',         label:'يوم',              w:50,  ph:'12' },
-  { key:'m',         label:'شهر',              w:50,  ph:'9' },
-  { key:'y',         label:'سنة',              w:62,  ph:'2026' },
-  { key:'delivery',  label:'معاد التسليم',     w:110, ph:'خلال يومين' },
+  { key:'name',      label:'اسم العميل',           w:140, ph:'الاسم' },
+  { key:'mobile',    label:'المحمول',              w:130, ph:'011xxxxxxxx' },
+  { key:'phone',     label:'التليفون',             w:120, ph:'أرضي' },
+  { key:'gov',       label:'المحافظة',             w:90,  ph:'القاهرة' },
+  { key:'area',      label:'المنطقة',              w:110, ph:'المنطقة' },
+  { key:'address',   label:'العنوان',              w:240, ph:'العنوان بالتفصيل' },
+  { key:'day',       label:'اليوم',                w:75,  ph:'السبت' },
+  { key:'d',         label:'يوم',                  w:50,  ph:'12' },
+  { key:'m',         label:'شهر',                  w:50,  ph:'9' },
+  { key:'y',         label:'سنة',                  w:62,  ph:'2026' },
+  { key:'delivery',  label:'معاد التسليم',         w:110, ph:'خلال يومين' },
   { key:'product',   label:'المنتج (متعدد بـ - )', w:240, ph:'منتج1 - منتج2' },
   { key:'qty',       label:'الكمية (متعدد بـ - )', w:110, ph:'1 - 1' },
   { key:'price',     label:'السعر (متعدد بـ - )',  w:130, ph:'650 - 670' },
-  { key:'shipping',  label:'الشحن',            w:70,  ph:'0' },
-  { key:'pagePhone', label:'تليفون الصفحة',    w:130, ph:'تلقائي' },
-  { key:'mall',      label:'اسم المول',        w:110, ph:'اسم الصفحة' },
-  { key:'center',    label:'سنتر',             w:85,  ph:'—' },
-  { key:'delegate',  label:'المندوب',          w:85,  ph:'—' },
-  { key:'total',     label:'الإجمالي',         w:100, ph:'تلقائي' },
-  { key:'manual',    label:'الحساب (يدوي)',    w:110, ph:'0' }
+  { key:'shipping',  label:'الشحن',                w:70,  ph:'0' }
 ];
 const COLS = GRID_COLS.length;
 
-let gridData = Array.from({length:20}, newEmptyRow);
+let gridData = Array.from({length:1}, newEmptyRow);
 function newEmptyRow(){ return new Array(COLS).fill(''); }
 
 function renderGridStructure(){
@@ -1117,35 +1137,26 @@ function renderGrid(){
   const tb = $('#gridBody');
   tb.innerHTML = gridData.map((row, ri) => {
     const cells = GRID_COLS.map((c, ci) => {
-      const isAuto = c.key === 'total' || c.key === 'code' || c.key === 'pagePhone';
       let cls = '';
-      if(c.key === 'total') cls = 'cell-total';
-      else if(c.key === 'manual') cls = 'cell-manual';
-      else if(c.key === 'product' || c.key === 'qty' || c.key === 'price') cls = 'cell-multi';
+      if(c.key === 'product' || c.key === 'qty' || c.key === 'price') cls = 'cell-multi';
       const val = row[ci] || '';
-      return `<td class="${cls}" contenteditable="${!isAuto}" data-row="${ri}" data-col="${ci}" data-ph="${esc(c.ph||'')}">${esc(val)}</td>`;
+      return `<td class="${cls}" contenteditable="true" data-row="${ri}" data-col="${ci}" data-ph="${esc(c.ph||'')}">${esc(val)}</td>`;
     }).join('');
+
+    // ⬇️ السطر اللي كان ناقص — بيرجع الصف كامل
     return `<tr>
       <td class="row-num">${ri+1}</td>
       ${cells}
       <td class="row-del"><button type="button" data-delrow="${ri}" title="حذف الصف">✕</button></td>
     </tr>`;
-  }).join('');
+  }).join('');   // ⬅️ القوس الناقص
+
   $('#rowCount').textContent = gridData.length;
   recalcAll();
 }
 
-function recalcRow(ri){
-  const row = gridData[ri]; if(!row) return;
-  const items = buildItemsFromRow(row);
-  const sub = items.reduce((s,i) => s + i.qty * i.price, 0);
-  const ship = num(row[16]);
-  const total = sub + ship;
-  row[21] = total ? String(total) : '';
-  const cell = $(`#gridBody td[data-row="${ri}"][data-col="21"]`);
-  if(cell) cell.textContent = total ? money(total) : '';
-}
-function recalcAll(){ gridData.forEach((_,i)=>recalcRow(i)); }
+function recalcRow(ri){ /* لا يوجد عمود إجمالي — الحساب يتم عند الحفظ */ }
+function recalcAll(){ /* no-op */ }
 
 $('#gridBody').addEventListener('input', e => {
   const td = e.target.closest('td[contenteditable]');
@@ -1160,7 +1171,7 @@ $('#gridBody').addEventListener('focusout', e => {
   const td = e.target.closest('td[contenteditable]');
   if(!td) return;
   const c = +td.dataset.col;
-  if(c === 2 || c === 3 || c === 17){
+  if(c === 1 || c === 2){
     const norm = normalizePhone(td.textContent);
     if(norm !== td.textContent){
       td.textContent = norm;
@@ -1203,21 +1214,8 @@ $('#gridTable').addEventListener('paste', e => {
   const looksLikeHeader = firstCells.some(c =>
     c.includes('كود الطلب') || c.includes('اسم العميل') || c.includes('اسم المول') || c.includes('المحمول'));
   if(looksLikeHeader && rows.length > 1) rows.shift();
-    let startRow = +td.dataset.row;
+      let startRow = +td.dataset.row;
   let startCol = +td.dataset.col;
-
-  // 🎯 كشف تلقائي: لو بادئ اللصق من عمود "كود الطلب" والبيانات مش فيها كود
-  if(startCol === 0 && rows.length){
-    const firstCell = rows[0].split('\t')[0].trim();
-    // لو أول خلية مش شكل كود (زي MIN-001) ومش رقم صافي = أغلب الظن اسمها
-    const looksLikeCode = /^[A-Z]{2,6}-\d+$/i.test(firstCell);
-    const looksLikeNumber = /^\d+$/.test(firstCell);
-    const looksLikeName = firstCell.length > 2 && !looksLikeCode && !looksLikeNumber;
-    if(looksLikeName){
-      startCol = 1;  // ← ابدأ من عمود "اسم العميل" تلقائياً
-      toast('🎯 تم رصد البيانات — بدأ اللصق من عمود "اسم العميل"');
-    }
-  }
 
   while(gridData.length < startRow + rows.length) gridData.push(newEmptyRow());
   let filled = 0;
@@ -1226,8 +1224,8 @@ $('#gridTable').addEventListener('paste', e => {
     cells.forEach((val, ci) => {
       const c = startCol + ci;
       if(c >= 0 && c < COLS){
-        let v = val.trim();
-        if(c === 2 || c === 3 || c === 17) v = normalizePhone(v);
+               let v = val.trim();
+        if(c === 1 || c === 2) v = normalizePhone(v);
         gridData[startRow + ri][c] = v;
         filled++;
       }
@@ -1257,7 +1255,7 @@ $('#addRowBtn').addEventListener('click', () => {
 
 $('#clearGridBtn').addEventListener('click', () => {
   if(!confirm('هل تريد مسح جميع بيانات الجدول؟ (لن يتم حذف الطلبات المحفوظة)')) return;
-  gridData = Array.from({length:20}, newEmptyRow);
+  gridData = Array.from({length:1}, newEmptyRow);
   renderGrid();
   toast('🗑 تم مسح الجدول');
 });
@@ -1329,10 +1327,7 @@ function doRedo(){
 function getCellEl(r, c){
   return document.querySelector(`#gridBody td[data-row="${r}"][data-col="${c}"]`);
 }
-function isAutoCell(c){
-  const k = GRID_COLS[c] && GRID_COLS[c].key;
-  return k === 'total' || k === 'code' || k === 'pagePhone';
-}
+function isAutoCell(c){ return false; }
 function normalizeRange(r1,c1,r2,c2){
   return {
     r1: Math.min(r1,r2), c1: Math.min(c1,c2),
@@ -1567,35 +1562,30 @@ $('#saveAllBtn').addEventListener('click', saveAllFromGrid);
 function saveAllFromGrid(){
   const defaultPageId = $('#defaultPage').value;
   const defaultPage = state.pages.find(p => p.id === defaultPageId);
+  if(!defaultPage){
+    alert('⚠️ اختر "الصفحة الافتراضية" من الأعلى أولاً');
+    return;
+  }
   let saved = 0;
   const errors = [];
 
   gridData.forEach((row, idx) => {
     if(row.every(v => !String(v||'').trim())) return;
-    const name   = (row[1]||'').trim();
-    const mobile = normalizePhone((row[2]||'').trim());
+
+    const name   = (row[0]||'').trim();
+    const mobile = normalizePhone((row[1]||'').trim());
     if(!name){   errors.push(`صف ${idx+1}: اسم العميل مطلوب`); return; }
     if(!mobile){ errors.push(`صف ${idx+1}: رقم المحمول مطلوب`); return; }
 
-    const mallName = (row[18]||'').trim();
-    let page = null;
-    if(mallName){
-      page = state.pages.find(p => p.name.toLowerCase() === mallName.toLowerCase());
-      if(!page){
-        const prefix = prefixOf(mallName);
-        page = mkPage(mallName, (row[17]||'').trim(), prefix, 1);
-        state.pages.push(page);
-      }
-    }
-    if(!page) page = defaultPage;
-    if(!page){ errors.push(`صف ${idx+1}: حدد الصفحة الافتراضية أو اكتب اسم المول`); return; }
+    const page = defaultPage;
 
-    let code = (row[0]||'').trim();
-    if(!code){ const r = peekCode(page); code = r.code; page.next = r.next; }
+    const r = peekCode(page);
+    const code = r.code;
+    page.next = r.next;
 
-    const d = (row[9]||'').trim().replace(/\D/g,'');
-    const m = (row[10]||'').trim().replace(/\D/g,'');
-    const y = (row[11]||'').trim().replace(/\D/g,'');
+    const d = (row[7]||'').trim().replace(/\D/g,'');
+    const m = (row[8]||'').trim().replace(/\D/g,'');
+    const y = (row[9]||'').trim().replace(/\D/g,'');
     let dateISO = todayISO();
     if(d && m && y){
       const dd = String(d).padStart(2,'0');
@@ -1607,26 +1597,25 @@ function saveAllFromGrid(){
     const items = buildItemsFromRow(row);
     if(!items.length){ errors.push(`صف ${idx+1}: يجب إضافة منتج واحد على الأقل`); return; }
 
-    const shipping = num(row[16]);
+    const shipping = num(row[14]);
     const subtotal = items.reduce((s,i) => s + i.qty*i.price, 0);
     const total    = subtotal + shipping;
-    const manual   = num(row[22]);
 
     state.orders.unshift({
       id: uid(), code, pageId: page.id, pageName: page.name,
-      pagePhone: page.phone || normalizePhone((row[17]||'').trim()),
+      pagePhone: page.phone || '',
       customerName: name, mobile,
-      landline: normalizePhone((row[3]||'').trim()),
-      governorate: (row[4]||'').trim(),
-      area: (row[5]||'').trim(),
-      address: (row[6]||'').trim(),
-      note: (row[7]||'').trim(),
-      day: (row[8]||'').trim() || dayFromISO(dateISO),
+      landline: normalizePhone((row[2]||'').trim()),
+      governorate: (row[3]||'').trim(),
+      area: (row[4]||'').trim(),
+      address: (row[5]||'').trim(),
+      note: '',
+      day: (row[6]||'').trim() || dayFromISO(dateISO),
       date: dateISO,
-      deliveryTime: (row[12]||'').trim(),
-      center: (row[19]||'').trim(),
-      delegate: (row[20]||'').trim(),
-      items, shipping, subtotal, total, manual,
+      deliveryTime: (row[10]||'').trim(),
+      center: '',
+      delegate: '',
+      items, shipping, subtotal, total, manual: 0,
       accountLocked: false, accountedAt: null,
       settled: false, settledAt: null, settledBatch: null,
       status: 'pending',
@@ -1639,7 +1628,7 @@ function saveAllFromGrid(){
   if(saved){
     saveState();
     renderAll();
-    gridData = Array.from({length:20}, newEmptyRow);
+    gridData = Array.from({length:1}, newEmptyRow);
     renderGrid();
     toast(`✅ تم حفظ ${saved} طلب بنجاح`);
   }
@@ -1847,6 +1836,14 @@ function actionButtons(o){
   return inv
     + `<button class="mini back" data-action="restore" data-id="${o.id}">↩</button>` + del;
 }
+/* 🎯 ترتيب الطلبات حسب آخر إجراء متخذ */
+function sortByAction(list){
+  return list.slice().sort((a, b) => {
+    const aTime = a.statusAt || a.createdAt || '';
+    const bTime = b.statusAt || b.createdAt || '';
+    return String(bTime).localeCompare(String(aTime));
+  });
+}
 function renderTable(status){
   const cfg = LIST_VIEWS[status];
   const tbody = $(cfg.tbody), empty = $(cfg.empty);
@@ -1855,6 +1852,7 @@ function renderTable(status){
   let list = state.orders.filter(o => o.status === status);
   if(pf) list = list.filter(o => o.pageId === pf);
   list = list.filter(o => matches(o, q));
+  list = sortByAction(list);   // 🎯 الترتيب بالأحدث إجراءً أولاً
 
   if(!list.length){
     tbody.innerHTML='';
@@ -1944,17 +1942,13 @@ function selectedInView(status){
 }
 function updateBulkBar(status){
   if(!status){ ['pending','delivered','cancelled'].forEach(updateBulkBar); return; }
-  const bar = $(LIST_VIEWS[status].bulk);
+   const bar = $(LIST_VIEWS[status].bulk);
   const cnt = $('#bulk-count-' + status);
-  const sumEl = $('#bulk-sum-' + status);
   const list = selectedInView(status);
   const n = list.length;
   if(n > 0){
     bar.classList.add('show');
     cnt.textContent = n;
-    const sum = list.reduce((s,o) => s + num(o.accountLocked ? o.manual : o.total), 0);
-    sumEl.style.display = 'inline-block';
-    sumEl.innerHTML = `الإجمالي: <b>${money(sum)}</b> ج.م`;
   } else {
     bar.classList.remove('show');
   }
@@ -2077,7 +2071,7 @@ document.addEventListener('click', e => {
     const codes = [];
     ids.forEach(id => { 
       const o = state.orders.find(x=>x.id===id); 
-      if(o){ o.status='delivered'; o.statusAt=todayISO(); codes.push(o.code); }
+      if(o){ o.status='delivered'; o.statusAt=new Date().toISOString(); codes.push(o.code); }
     });
     selected.clear();
     lastClickedId = null;
@@ -2091,7 +2085,7 @@ document.addEventListener('click', e => {
     const codes = [];
     ids.forEach(id => { 
       const o = state.orders.find(x=>x.id===id); 
-      if(o){ o.status='cancelled'; o.statusAt=todayISO(); codes.push(o.code); }
+      if(o){ o.status='cancelled'; o.statusAt=new Date().toISOString(); codes.push(o.code); }
     });
     selected.clear();
     lastClickedId = null;
@@ -2105,7 +2099,7 @@ document.addEventListener('click', e => {
     const codes = [];
     ids.forEach(id => { 
       const o = state.orders.find(x=>x.id===id); 
-      if(o){ o.status='pending'; o.statusAt=null; codes.push(o.code); }
+      if(o){ o.status='pending'; o.statusAt=new Date().toISOString(); codes.push(o.code); }
     });
     selected.clear();
     lastClickedId = null;
@@ -2128,21 +2122,21 @@ document.addEventListener('click', e => {
   
   if(action === 'deliver'){
     if(!confirm(`📦 نقل الطلب إلى التسليمات؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\nالمحمول: ${o.mobile}`)) return;
-    o.status='delivered'; o.statusAt=todayISO();
+    o.status='delivered'; o.statusAt=new Date().toISOString();
     saveState(); renderAll();
     alert(`✅ تم نقل الطلب ${o.code} للتسليمات بنجاح`);
     return;
   }
   if(action === 'cancel'){
     if(!confirm(`🚫 نقل الطلب إلى الملغيين؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\nالمحمول: ${o.mobile}`)) return;
-    o.status='cancelled'; o.statusAt=todayISO();
+    o.status='cancelled'; o.statusAt=new Date().toISOString();
     saveState(); renderAll();
     alert(`🚫 تم نقل الطلب ${o.code} للملغيين`);
     return;
   }
   if(action === 'restore'){
     if(!confirm(`↩️ استرجاع الطلب إلى الطلبات الحالية؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}`)) return;
-    o.status='pending'; o.statusAt=null;
+    o.status='pending'; o.statusAt=new Date().toISOString();
     saveState(); renderAll();
     alert(`↩️ تم استرجاع الطلب ${o.code} بنجاح`);
     return;
@@ -2867,8 +2861,13 @@ function renderPages(){
   }
   body.innerHTML = state.pages.map(p => {
     const profit = currentProfitOfPage(p.id);
-    const totalSales = totalSalesOfPage(p.id);
-    const settled = settledTotalOfPage(p.id);
+    // 💰 إجمالي التسويات = مجموع كل التسويات اللي اتعملت للصفحة
+    const totalSettlements = settledTotalOfPage(p.id);
+    // ✅ آخر تسوية فقط
+    const lastSettle = (p.settlements || []).slice(-1)[0];
+    const lastAmount = lastSettle ? num(lastSettle.total) : 0;
+    // 📦 عدد الطلبات المُسوّاة
+    const settledCount = state.orders.filter(o => o.pageId === p.id && o.settled === true).length;
     const profitClass = profit > 0 ? 'profit-pos' : 'profit-zero';
     const isEditing = (window._editingPageId === p.id);
     const ro = isEditing ? '' : 'readonly';
@@ -2879,9 +2878,9 @@ function renderPages(){
       <td><input class="page-inp" data-pid="${p.id}" data-field="prefix" value="${esc(p.prefix)}" dir="ltr" ${ro} style="max-width:90px;${roStyle}"></td>
       <td><input class="page-inp" data-pid="${p.id}" data-field="phone" value="${esc(p.phone)}" dir="ltr" placeholder="—" ${ro} style="${roStyle}"></td>
       <td><span class="code">${esc(p.prefix)}-${String(p.next||1).padStart(3,'0')}</span></td>
-      <td><b>${orderCountOfPage(p.id)}</b></td>
-      <td class="profit-total">${money(totalSales)} ج.م</td>
-      <td class="profit-settled">${money(settled)} ج.م</td>
+      <td><b>${settledCount}</b></td>
+      <td class="profit-total">${money(totalSettlements)} ج.م</td>
+      <td class="profit-settled">${money(lastAmount)} ج.م</td>
       <td><span class="${profitClass}">${money(profit)} ج.م</span></td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -3013,14 +3012,18 @@ $('#pagesBody').addEventListener('input', e => {
 function showHistory(pageId){
   const page = state.pages.find(p=>p.id===pageId); if(!page) return;
   const hist = (page.settlements || []).slice().reverse();
-  const totalSales = totalSalesOfPage(pageId);
+  const totalSettled = settledTotalOfPage(pageId);
+  const lastSettle = hist[0];
 
   let html = `
     <div style="text-align:center;margin-bottom:14px">
       <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px">${esc(page.name)}</div>
-      <div style="font-size:12px;color:var(--muted)">
-        إجمالي المبيعات: <b style="color:#0f766e">${money(totalSales)} ج.م</b>
-        • عدد التسويات: <b style="color:var(--primary)">${hist.length}</b>
+      <div style="font-size:12px;color:var(--muted);line-height:1.9">
+        💰 إجمالي التسويات: <b style="color:#0f766e">${money(totalSettled)} ج.م</b>
+        &nbsp;•&nbsp;
+        ✅ آخر تسوية: <b style="color:#4338ca">${lastSettle ? money(lastSettle.total) + ' ج.م' : '—'}</b>
+        &nbsp;•&nbsp;
+        📦 عدد التسويات: <b style="color:var(--primary)">${hist.length}</b>
       </div>
     </div>
   `;
@@ -3034,7 +3037,10 @@ function showHistory(pageId){
             <span class="d">📅 ${fmtDate(h.date)}</span>
             <span class="n" style="margin-inline-start:8px">${h.ordersCount} طلب</span>
           </div>
-          <div class="t">${money(h.total)} ج.م</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="t">${money(h.total)} ج.م</div>
+            <button class="mini inv" data-hist-batch="${h.id}" data-hist-page="${pageId}" title="عرض الطلبات" style="padding:5px 10px">👁 عرض الطلبات</button>
+          </div>
         </div>
       `;
     });
@@ -3043,6 +3049,98 @@ function showHistory(pageId){
   $('#reportModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+
+/* =========================================================
+   📋 SETTLEMENT DETAILS (عرض طلبات تسوية معينة)
+   ========================================================= */
+function showSettlementOrders(batchId, pageId){
+  const page = state.pages.find(p => p.id === pageId);
+  if(!page){ toast('⚠️ الصفحة غير موجودة'); return; }
+  const settlement = (page.settlements || []).find(h => h.id === batchId);
+  if(!settlement){ toast('⚠️ التسوية غير موجودة'); return; }
+
+  const orders = (settlement.orderIds || [])
+    .map(id => state.orders.find(o => o.id === id))
+    .filter(Boolean);
+
+  $('#settleDetailTitle').textContent = `📋 تسوية ${page.name} — ${fmtDate(settlement.date)}`;
+
+  let html = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+      <div class="settle-box" style="text-align:center">
+        <div class="lbl">📅 تاريخ التسوية</div>
+        <div class="val" style="font-size:18px">${fmtDate(settlement.date)}</div>
+      </div>
+      <div class="settle-box green" style="text-align:center">
+        <div class="lbl">💰 إجمالي المبلغ</div>
+        <div class="val" style="font-size:20px">${money(settlement.total)} ج.م</div>
+      </div>
+      <div class="settle-box" style="text-align:center">
+        <div class="lbl">📦 عدد الطلبات</div>
+        <div class="val" style="font-size:20px">${settlement.ordersCount}</div>
+      </div>
+    </div>
+
+    <div class="report-section-title">📋 الطلبات المُسوّاة في هذه الدفعة (${orders.length})</div>
+  `;
+
+  if(!orders.length){
+    html += `<div style="text-align:center;padding:30px;color:var(--muted);background:#f8fafc;border-radius:12px;border:1.5px dashed var(--border)">لا توجد طلبات محفوظة لهذه التسوية (ربما تم حذفها)</div>`;
+  } else {
+    html += `
+      <div class="table-wrap">
+        <table class="tbl" style="min-width:auto">
+          <thead><tr>
+            <th>كود الطلب</th>
+            <th>اسم العميل</th>
+            <th>المحمول</th>
+            <th>المنتج</th>
+            <th>الإجمالي</th>
+            <th>الحساب</th>
+            <th>الحالة</th>
+          </tr></thead>
+          <tbody>
+    `;
+    orders.forEach(o => {
+      const prodName = (o.items||[]).map(i => i.name).join(' - ') || '—';
+      const statusLabel = o.status === 'delivered'
+        ? '<span style="background:#ecfdf5;color:#15803d;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px">✅ مُسلّم</span>'
+        : '<span style="background:#fee2e2;color:#b91c1c;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px">🚫 ملغي</span>';
+      html += `
+        <tr>
+          <td><span class="code">${esc(o.code)}</span></td>
+          <td><b>${esc(o.customerName)}</b></td>
+          <td dir="ltr" style="white-space:nowrap">${esc(o.mobile)}</td>
+          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(prodName)}">${esc(prodName)}</td>
+          <td class="money">${money(o.total)}</td>
+          <td style="color:#15803d;font-weight:800">${money(o.manual)}</td>
+          <td>${statusLabel}</td>
+        </tr>
+      `;
+    });
+    html += '</tbody></table></div>';
+  }
+
+  $('#settleDetailBody').innerHTML = html;
+  $('#settleDetailModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSettleDetail(){
+  $('#settleDetailModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// زر "عرض الطلبات" + إغلاق المودال
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-hist-batch]');
+  if(btn){
+    showSettlementOrders(btn.dataset.histBatch, btn.dataset.histPage);
+    return;
+  }
+  if(e.target.matches('[data-close-settle-detail]')) closeSettleDetail();
+  if(e.target.id === 'settleDetailModal') closeSettleDetail();
+});
 
 /* =========================================================
    FULL REPORT (with settled orders table + filter)
@@ -3101,41 +3199,44 @@ function renderReport(pageFilterId){
   });
   html += `</tbody></table></div>`;
 
-  // Settled orders table
-  let settledOrders = state.orders.filter(o => o.settled === true);
-  if(pf) settledOrders = settledOrders.filter(o => o.pageId === pf);
-  settledOrders.sort((a,b) => (b.settledAt||'').localeCompare(a.settledAt||''));
-
-  html += `<div class="report-section-title">💰 الطلبات المُسوّاة (${settledOrders.length})</div>`;
-  if(!settledOrders.length){
-    html += `<div style="text-align:center;padding:30px;color:var(--muted);background:#f8fafc;border-radius:12px;border:1.5px dashed var(--border)">لا توجد طلبات مُسوّاة بعد</div>`;
-  } else {
-    html += `<div class="table-wrap"><table class="tbl" style="min-width:auto">
-      <thead><tr>
-        <th>كود الطلب</th>
-        <th>اسم العميل</th>
-        <th>المحافظة</th>
-        <th>المنتج</th>
-        <th>الإجمالي</th>
-        <th>الحساب</th>
-        <th>الصفحة</th>
-        <th>تاريخ التسوية</th>
-      </tr></thead><tbody>`;
-    settledOrders.forEach(o => {
-      const prodName = (o.items||[]).map(i => i.name).join(' - ') || '—';
-      html += `
-        <tr>
-          <td><span class="code">${esc(o.code)}</span></td>
-          <td><b>${esc(o.customerName)}</b></td>
-          <td>${esc(o.governorate||'—')}</td>
-          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(prodName)}">${esc(prodName)}</td>
-          <td class="money">${money(o.total)}</td>
-          <td style="color:#15803d;font-weight:800">${money(o.manual)}</td>
-          <td><span class="pill">${esc(o.pageName)}</span></td>
-          <td style="font-size:11.5px;color:var(--muted)">${o.settledAt ? fmtDate(o.settledAt.slice(0,10)) : '—'}</td>
-        </tr>`;
+  // 📜 سجل التسويات (بدل الطلبات المُسوّاة)
+  let allSettlements = [];
+  state.pages.forEach(p => {
+    if(pf && p.id !== pf) return;
+    (p.settlements || []).forEach(h => {
+      allSettlements.push({
+        id: h.id,
+        date: h.date,
+        total: h.total,
+        ordersCount: h.ordersCount,
+        pageId: p.id,
+        pageName: p.name
+      });
     });
-    html += `</tbody></table></div>`;
+  });
+  allSettlements.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  html += `<div class="report-section-title">📜 سجل التسويات (${allSettlements.length})</div>`;
+  if(!allSettlements.length){
+    html += `<div style="text-align:center;padding:30px;color:var(--muted);background:#f8fafc;border-radius:12px;border:1.5px dashed var(--border)">لا توجد تسويات بعد</div>`;
+  } else {
+    html += '<div style="margin-top:6px">';
+    allSettlements.forEach(h => {
+      html += `
+        <div class="hist-row">
+          <div>
+            <span class="d">📅 ${fmtDate(h.date)}</span>
+            <span class="n" style="margin-inline-start:8px">${h.ordersCount} طلب</span>
+            <span class="n" style="margin-inline-start:8px;background:#f0f9ff;color:#0369a1">📄 ${esc(h.pageName)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="t">${money(h.total)} ج.م</div>
+            <button class="mini inv" data-hist-batch="${h.id}" data-hist-page="${h.pageId}" title="عرض الطلبات" style="padding:5px 10px">👁 عرض الطلبات</button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
   }
 
   $('#reportBody').innerHTML = html;
@@ -3334,17 +3435,18 @@ document.addEventListener('click', e => {
     return;
   }
 
-  if(type === 'profit'){
-    const headers = ['الصفحة','عدد الطلبات','إجمالي المبيعات','المُسوّى سابقاً','الربح الحالي','آخر تسوية'];
-    const rows = state.pages.map(p => {
-      if(pf && p.id !== pf) return null;
-      const lastSettle = (p.settlements||[]).slice(-1)[0];
-      return [
-        p.name, orderCountOfPage(p.id), money(totalSalesOfPage(p.id)),
-        money(settledTotalOfPage(p.id)), money(currentProfitOfPage(p.id)),
-        lastSettle ? fmtDate(lastSettle.date) : '—'
-      ];
-    }).filter(Boolean);
+ if(type === 'profit'){
+  const headers = ['الصفحة','الطلبات المُسوّاة','إجمالي التسويات','آخر تسوية','الربح الحالي'];
+  const rows = state.pages.map(p => {
+    if(pf && p.id !== pf) return null;
+    const lastSettle = (p.settlements||[]).slice(-1)[0];
+    const settledCount = state.orders.filter(o => o.pageId === p.id && o.settled === true).length;
+    return [
+      p.name, settledCount, money(settledTotalOfPage(p.id)),
+      lastSettle ? money(lastSettle.total) : '0',
+      money(currentProfitOfPage(p.id))
+    ];
+  }).filter(Boolean);
     if(!rows.length){ toast('⚠️ لا توجد بيانات'); return; }
     exportToExcel('تقرير-الأرباح-' + todayISO(), buildExcelTable(headers, rows));
     toast('⬇ تم تصدير تقرير الأرباح');
@@ -3368,6 +3470,76 @@ document.addEventListener('click', e => {
 });
 
 /* =========================================================
+   💰 MY PROFIT (for page users)
+   ========================================================= */
+function renderMyProfit(){
+  const body = $('#myProfitBody');
+  if(!body) return;
+
+  if(window.currentRole !== 'page' || !window.currentPageId){
+    body.innerHTML = '';
+    return;
+  }
+
+  const pageId = window.currentPageId;
+  const page = state.pages.find(p => p.id === pageId);
+  if(!page){
+    body.innerHTML = '<div class="empty"><span class="ico">⚠️</span>صفحتك غير موجودة في النظام</div>';
+    return;
+  }
+
+  // 💰 إجمالي التسويات = مجموع كل التسويات
+const settledTotal = settledTotalOfPage(pageId);
+// ✅ آخر تسوية
+const lastSettle = (page.settlements || []).slice(-1)[0];
+const lastAmount = lastSettle ? num(lastSettle.total) : 0;
+const currentProfit = currentProfitOfPage(pageId);
+const settlements = (page.settlements || []).slice().reverse();
+
+   let html = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px">
+      <div class="settle-box" style="text-align:center">
+        <div class="lbl">💰 إجمالي التسويات</div>
+        <div class="val">${money(settledTotal)} <span style="font-size:14px">ج.م</span></div>
+      </div>
+      <div class="settle-box amber" style="text-align:center">
+        <div class="lbl">✅ آخر تسوية</div>
+        <div class="val">${money(lastAmount)} <span style="font-size:14px">ج.م</span></div>
+      </div>
+      <div class="settle-box green" style="text-align:center">
+        <div class="lbl">📊 الربح الحالي (غير مُسوّى)</div>
+        <div class="val">${money(currentProfit)} <span style="font-size:14px">ج.م</span></div>
+      </div>
+    </div>
+  `;
+
+  // سجل التسويات
+  html += `<div class="report-section-title">📜 سجل التسويات (${settlements.length})</div>`;
+  if(!settlements.length){
+    html += `<div style="text-align:center;padding:30px;color:var(--muted);background:#f8fafc;border-radius:12px;border:1.5px dashed var(--border)">لا توجد تسويات سابقة</div>`;
+  } else {
+    html += '<div style="margin-bottom:20px">';
+    settlements.forEach((h, i) => {
+  html += `
+    <div class="hist-row">
+      <div>
+        <span class="d">📅 ${fmtDate(h.date)}</span>
+        <span class="n" style="margin-inline-start:8px">${h.ordersCount} طلب</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="t">${money(h.total)} ج.م</div>
+        <button class="mini inv" data-hist-batch="${h.id}" data-hist-page="${pageId}" title="عرض الطلبات" style="padding:5px 10px">👁 عرض الطلبات</button>
+      </div>
+    </div>
+  `;
+});
+    html += '</div>';
+  }
+
+    body.innerHTML = html;
+}
+
+/* =========================================================
    RENDER ALL
    ========================================================= */
 function renderAll(){
@@ -3376,9 +3548,24 @@ function renderAll(){
   renderTable('delivered');
   renderTable('cancelled');
   renderPages();
-  const cP = state.orders.filter(o => o.status==='pending').length;
-  const cD = state.orders.filter(o => o.status==='delivered').length;
-  const cC = state.orders.filter(o => o.status==='cancelled').length;
+  renderMyProfit();
+
+  // 🎯 تحديد الفلتر: أدمن (حسب اختيار pageFilter) أو صفحة (صفحته فقط)
+  let filterPageId = null;
+  if(window.currentRole === 'page' && window.currentPageId){
+    filterPageId = window.currentPageId;
+  } else {
+    filterPageId = $('#pageFilter').value || null;
+  }
+
+  const filtered = filterPageId
+    ? state.orders.filter(o => o.pageId === filterPageId)
+    : state.orders;
+
+  const cP = filtered.filter(o => o.status==='pending').length;
+  const cD = filtered.filter(o => o.status==='delivered').length;
+  const cC = filtered.filter(o => o.status==='cancelled').length;
+
   $('#bgPending').textContent = cP;
   $('#bgDelivered').textContent = cD;
   $('#bgCancelled').textContent = cC;
@@ -3397,6 +3584,7 @@ document.addEventListener('keydown', e => {
     closeSettle();
     closeView();
     closeBulkPrint();
+    closeSettleDetail();
     $('#reportModal').classList.remove('open');
     document.body.style.overflow = '';
   }
@@ -3520,10 +3708,13 @@ function applyRoleRestrictions(role, pageId, pageName){
   const oldStyle = document.getElementById('roleStyle');
   if(oldStyle) oldStyle.remove();
 
-  if(role === 'admin'){
+   if(role === 'admin'){
     document.body.classList.add('role-admin');
     const sub = document.querySelector('.brand p');
     if(sub) sub.textContent = 'إدخال Excel مباشر • تسليمات • ملغيين • فواتير • تسويات';
+    // إخفاء تاب "أرباحي" للأدمن
+    const pt = document.getElementById('tab-profits');
+    if(pt) pt.style.display = 'none';
     return;
   }
 
@@ -3550,9 +3741,13 @@ function applyRoleRestrictions(role, pageId, pageName){
     document.getElementById('view-orders').classList.add('active');
   }
 
-  // اخفاء الـ export dropdown
+    // اخفاء الـ export dropdown
   const expMenu = document.querySelector('.export-menu');
   if(expMenu) expMenu.style.display = 'none';
+
+  // ✅ إظهار تاب "أرباحي" للصفحة
+  const profitsTab = document.getElementById('tab-profits');
+  if(profitsTab) profitsTab.style.display = 'flex';
 
   // إضافة CSS لإخفاء الأزرار الحساسة
   const style = document.createElement('style');
@@ -3653,7 +3848,7 @@ async function onUserLoggedIn(user){
       // - كل الصفحات: shared/data/main (يقرا من مكان مشترك)
       // الأدمن يحفظ في الاتنين
       try {
-        const sharedRef = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+        const sharedRef = window.fbDoc(window.fbDb, 'shared', 'data');
         const sharedSnap = await window.fbGetDoc(sharedRef);
         if(sharedSnap.exists() && sharedSnap.data().data){
           const cloudData = sharedSnap.data().data;
@@ -3727,7 +3922,7 @@ async function syncToShared(){
   if(window.currentRole !== 'admin') return;
   if(!window.fbReady || !window.fbCurrentUser) return;
   try {
-    const ref = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+    const ref = window.fbDoc(window.fbDb, 'shared', 'data');
     await window.fbSetDoc(ref, {
       data: state,
       updatedAt: new Date().toISOString(),
@@ -3763,7 +3958,7 @@ function startRealtimeListener(user, role){
   if(role === 'admin'){
     ref = window.fbDoc(window.fbDb, 'users', user.uid, 'state', 'main');
   } else {
-    ref = window.fbDoc(window.fbDb, 'shared', 'data', 'main');
+    ref = window.fbDoc(window.fbDb, 'shared', 'data');
   }
 
   let first = true;
