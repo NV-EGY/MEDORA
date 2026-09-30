@@ -460,6 +460,14 @@ table.excel-grid td.range-marquee.cut {
   opacity: 0.55;
 }
 
+/* ═══ إصلاح اتجاه الأرقام (منع ظهور السالب غلط) ═══ */
+.money, .acc-input, .i-price, .i-qty, .i-total,
+#f_shipping, #e_manual, #e_shipping, #e_total,
+input[type="number"], td.cell-multi {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 </style>
 
 <!-- ============================================================
@@ -1215,19 +1223,28 @@ const GRID_COLS = [
 const COLS = GRID_COLS.length;
 
 let gridData = Array.from({length:1}, newEmptyRow);
-function newEmptyRow(){ return new Array(COLS).fill(''); }
+function newEmptyRow(){
+  const row = new Array(COLS).fill('');
+  const d = new Date();
+  const AR = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  row[6]  = AR[d.getDay()] || '';          // اليوم
+  row[7]  = String(d.getDate());            // يوم
+  row[8]  = String(d.getMonth() + 1);       // شهر
+  row[9]  = String(d.getFullYear());        // سنة
+  row[10] = 'خلال يومين';                    // معاد التسليم
+  return row;
+}
 
 function renderGridStructure(){
   const cg = $('#gridCols');
   cg.innerHTML = '<col style="width:38px">' +
-    GRID_COLS.map(c => `<col style="width:${c.w}px">`).join('') +
-    '<col style="width:36px">';
+    GRID_COLS.map(c => `<col style="width:${c.w}px">`).join('');
 
   const th = $('#gridHead');
   th.innerHTML = '<tr>' +
     '<th style="width:38px">#</th>' +
     GRID_COLS.map(c => `<th title="${esc(c.label)}">${esc(c.label)}</th>`).join('') +
-    '<th style="width:36px"></th></tr>';
+    '</tr>';
 }
 
 function renderGrid(){
@@ -1240,13 +1257,11 @@ function renderGrid(){
       return `<td class="${cls}" contenteditable="false" tabindex="-1" data-row="${ri}" data-col="${ci}" data-ph="${esc(c.ph||'')}">${esc(val)}</td>`;
     }).join('');
 
-    // ⬇️ السطر اللي كان ناقص — بيرجع الصف كامل
     return `<tr>
       <td class="row-num">${ri+1}</td>
       ${cells}
-      <td class="row-del"><button type="button" data-delrow="${ri}" title="حذف الصف">✕</button></td>
     </tr>`;
-  }).join('');   // ⬅️ القوس الناقص
+  }).join('');
 
   $('#rowCount').textContent = gridData.length;
   recalcAll();
@@ -1260,6 +1275,39 @@ $('#gridBody').addEventListener('input', e => {
   if(!td) return;
   const r = +td.dataset.row, c = +td.dataset.col;
   if(!gridData[r]) gridData[r] = newEmptyRow();
+
+  // 🎯 أعمدة يوم/شهر/سنة → أرقام فقط (تنضيف فوري وقت الكتابة أو اللصق)
+  if(isNumericOnlyCol(c)){
+    const original = td.textContent || '';
+    const cleaned  = original.replace(/[^\d]/g, '');
+    if(cleaned !== original){
+      // احفظ مكان المؤشر قدر الإمكان
+      const sel = window.getSelection();
+      const offset = sel && sel.rangeCount ? sel.getRangeAt(0).startOffset : cleaned.length;
+      const removed = original.length - cleaned.length;
+      td.textContent = cleaned;
+      try {
+        const range = document.createRange();
+        const node = td.firstChild;
+        if(node){
+          const newOffset = Math.max(0, Math.min(offset - removed, node.length));
+          range.setStart(node, newOffset);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          range.selectNodeContents(td);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch(_) {}
+    }
+    gridData[r][c] = (td.textContent || '').trim();
+    recalcRow(r);
+    return;
+  }
+
   gridData[r][c] = td.textContent.trim();
   recalcRow(r);
 });
@@ -1284,8 +1332,17 @@ $('#gridBody').addEventListener('keydown', e => {
   const r = +td.dataset.row, c = +td.dataset.col;
 
   // ═══════════════ EDIT MODE ═══════════════
-  if(isEditing(r, c)){
-    // Enter — احفظ وانتقل
+   if(isEditing(r, c)){
+
+    // 🚫 أعمدة يوم/شهر/سنة → اقبل الأرقام فقط أثناء الكتابة
+    if(isNumericOnlyCol(c) && e.key.length === 1
+       && !e.ctrlKey && !e.metaKey && !e.altKey
+       && !/\d/.test(e.key)){
+      e.preventDefault();
+      return;
+    }
+
+    // ─── Enter — احفظ وانتقل ───
     if(e.key === 'Enter'){
       e.preventDefault();
       exitEditMode(true);
@@ -1297,7 +1354,8 @@ $('#gridBody').addEventListener('keydown', e => {
       }
       return;
     }
-    // Tab — احفظ وانتقل يمين/شمال
+
+    // ─── Tab — احفظ وانتقل يمين/شمال ───
     if(e.key === 'Tab'){
       e.preventDefault();
       exitEditMode(true);
@@ -1311,14 +1369,30 @@ $('#gridBody').addEventListener('keydown', e => {
       }
       return;
     }
-    // Escape — تراجع عن التعديل
+
+    // ─── Escape — تراجع عن التعديل ───
     if(e.key === 'Escape'){
       e.preventDefault();
       exitEditMode(false);
       focusCell(r, c);
       return;
     }
-    // أي مفتاح تاني (حروف، أسهم، إلخ) — سيبه للمتصفح عادي
+
+    // 🎯🎯 الأسهم — احفظ وانتقل بين الخلايا (زي Excel)
+    if(e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+       e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+      e.preventDefault();
+      e.stopPropagation();
+      exitEditMode(true);
+      // RTL: اليسار = c+1 (ناحية بداية السطر)، اليمين = c-1
+      if(e.key === 'ArrowUp')    focusCell(Math.max(r-1, 0), c);
+      if(e.key === 'ArrowDown')  focusCell(Math.min(r+1, gridData.length-1), c);
+      if(e.key === 'ArrowLeft')  focusCell(r, Math.min(c+1, COLS-1), true);
+      if(e.key === 'ArrowRight') focusCell(r, Math.max(c-1, 0), false);
+      return;
+    }
+
+    // أي مفتاح تاني (حروف، إلخ) — سيبه للمتصفح عادي
     return;
   }
 
@@ -1331,8 +1405,13 @@ $('#gridBody').addEventListener('keydown', e => {
     return;
   }
 
-  // 🎯 أي حرف قابل للطباعة → ادخل التعديل مع استبدال المحتوى بيه
+    // 🎯 أي حرف قابل للطباعة → ادخل التعديل مع استبدال المحتوى بيه
   if(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+    // 🚫 في أعمدة يوم/شهر/سنة — اقبل الأرقام فقط
+    if(isNumericOnlyCol(c) && !/\d/.test(e.key)){
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     enterEditMode(r, c, { replaceWith: e.key });
     return;
@@ -1351,17 +1430,22 @@ $('#gridBody').addEventListener('keydown', e => {
       if(td) td.textContent = '';
       return;
     }
-    return;  // التحديد المتعدد يتعامل معاه الـ document handler
+    return;
   }
 
   // ─── Enter / Shift+Enter ───
   if(e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();
+    focusCell(Math.min(r+1, gridData.length-1), c);
+    return;
+  }
+  if(e.key === 'Enter' && e.shiftKey){
+    e.preventDefault();
     focusCell(Math.max(r-1, 0), c);
     return;
   }
 
-  // ─── Tab / Shift+Tab (نفس Excel: يلف على الصفوف) ───
+  // ─── Tab / Shift+Tab ───
   if(e.key === 'Tab'){
     e.preventDefault();
     const nc = e.shiftKey ? c - 1 : c + 1;
@@ -1375,8 +1459,8 @@ $('#gridBody').addEventListener('keydown', e => {
     return;
   }
 
-  // ─── Arrow Down/Up (دائماً بين الخلايا زي Excel) ───
-   if(e.key === 'ArrowDown'){
+  // ─── Arrow Down/Up ───
+  if(e.key === 'ArrowDown'){
     e.preventDefault();
     if(e.shiftKey && dragStart){
       dragEnd = { r: Math.min(r+1, gridData.length-1), c: dragEnd.c };
@@ -1392,32 +1476,15 @@ $('#gridBody').addEventListener('keydown', e => {
     if(e.shiftKey && dragStart){
       dragEnd = { r: Math.max(r-1, 0), c: dragEnd.c };
       highlightSelection();
-     focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
+      focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
     } else {
       focusCell(Math.max(r-1, 0), c);
     }
     return;
   }
 
-  // ─── Arrow Left/Right (بين الخلايا لو المؤشر على الحرف الأول/الأخير) ───
+  // ─── Arrow Left/Right — RTL (يسار = c+1، يمين = c-1) ───
   if(e.key === 'ArrowLeft'){
-    if(e.shiftKey && dragStart){
-      e.preventDefault();
-      dragEnd = { r: dragEnd.r, c: Math.max(c-1, 0) };
-      highlightSelection();
-      focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
-      return;
-    }
-    const sel = window.getSelection();
-    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
-    const atStart = !range || (range.collapsed && range.startOffset === 0);
-    if(atStart && c > 0){
-      e.preventDefault();
-      focusCell(r, c-1, true);
-    }
-    return;
-  }
-  if(e.key === 'ArrowRight'){
     if(e.shiftKey && dragStart){
       e.preventDefault();
       dragEnd = { r: dragEnd.r, c: Math.min(c+1, COLS-1) };
@@ -1425,14 +1492,20 @@ $('#gridBody').addEventListener('keydown', e => {
       focusCell(dragEnd.r, dragEnd.c, false, { keepSelection: true });
       return;
     }
-    const sel = window.getSelection();
-    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
-    const textLen = (td.textContent || '').length;
-    const atEnd = !range || (range.collapsed && range.startOffset >= textLen);
-    if(atEnd && c < COLS - 1){
+    e.preventDefault();
+    if(c < COLS - 1) focusCell(r, c+1, true);
+    return;
+  }
+  if(e.key === 'ArrowRight'){
+    if(e.shiftKey && dragStart){
       e.preventDefault();
-      focusCell(r, c+1, false);
+      dragEnd = { r: dragEnd.r, c: Math.max(c-1, 0) };
+      highlightSelection();
+      focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
+      return;
     }
+    e.preventDefault();
+    if(c > 0) focusCell(r, c-1, false);
     return;
   }
 
@@ -1460,7 +1533,7 @@ $('#gridBody').addEventListener('keydown', e => {
     return;
   }
 
-  // ─── Ctrl+ArrowDown / Ctrl+ArrowUp (التنقل السريع) ───
+  // ─── Ctrl+ArrowDown / Ctrl+ArrowUp ───
   if(e.key === 'ArrowDown' && e.ctrlKey){
     e.preventDefault();
     focusCell(gridData.length-1, c);
@@ -1588,8 +1661,10 @@ document.addEventListener('paste', async (e) => {
       const r = targetR + i, c = targetC + j;
       if(r >= gridData.length || c >= COLS) continue;
       if(isAutoCell(c)) continue;
-      let v = data[i][j];
+           let v = data[i][j];
       if(c === 1 || c === 2) v = normalizePhone(v);
+      // 🎯 يوم/شهر/سنة → أرقام فقط
+      if(isNumericOnlyCol(c)) v = String(v ?? '').replace(/[^\d]/g, '');
       gridData[r][c] = v;
       filled++;
     }
@@ -1662,7 +1737,17 @@ $('#exportGridBtn').addEventListener('click', () => {
 $('#templateBtn').addEventListener('click', () => {
   const headers = GRID_COLS.map(c => c.label);
   const rows = [];
-  for(let i = 0; i < 30; i++) rows.push(new Array(COLS).fill(''));
+  const d = new Date();
+  const AR = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  for(let i = 0; i < 30; i++){
+    const row = new Array(COLS).fill('');
+    row[6]  = AR[d.getDay()] || '';
+    row[7]  = String(d.getDate());
+    row[8]  = String(d.getMonth() + 1);
+    row[9]  = String(d.getFullYear());
+    row[10] = 'خلال يومين';
+    rows.push(row);
+  }
   exportToExcel('قالب-فارغ-' + todayISO(), buildExcelTable(headers, rows));
   toast('📋 تم تحميل القالب الفارغ');
 });
@@ -1865,6 +1950,9 @@ function getCellEl(r, c){
   return document.querySelector(`#gridBody td[data-row="${r}"][data-col="${c}"]`);
 }
 function isAutoCell(c){ return false; }
+
+// 🎯 أعمدة "يوم / شهر / سنة" — أرقام فقط
+function isNumericOnlyCol(c){ return c === 7 || c === 8 || c === 9; }
 function normalizeRange(r1,c1,r2,c2){
   return {
     r1: Math.min(r1,r2), c1: Math.min(c1,c2),
@@ -2302,6 +2390,8 @@ function deleteSelection(){
     }
   }
   renderGrid();
+  // 🔑 رجّع التركيز لأول خلية — لأن renderGrid دمر الـ DOM القديم وخلق واحد جديد
+  focusCell(r1, c1, false, { keepSelection: true });
   highlightSelection();
   toast(`🗑️ تم حذف ${count} خلية`);
 }
@@ -2348,6 +2438,20 @@ document.addEventListener('cut', (e) => {
 
 // -------- Keyboard shortcuts --------
 document.addEventListener('keydown', e => {
+  // ═══════════════════════════════════════════════════════════
+  // 🛑 أثناء التعديل داخل خلية — سيبه للمتصفح
+  //    (الكتابة، الحذف، الأسهم، Home/End...) كلها تتعامل طبيعي.
+  //    الوحيد اللي بنسمح بيه: Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+  //    عشان يشتغلوا مع نظام التراجع بتاعنا.
+  // ═══════════════════════════════════════════════════════════
+  if(editingCell){
+    const k0 = (e.key || '').toLowerCase();
+    const isZ0 = k0 === 'z' || e.code === 'KeyZ';
+    const isY0 = k0 === 'y' || e.code === 'KeyY';
+    const isCtrlZ0 = (e.ctrlKey || e.metaKey) && !e.altKey && (isZ0 || isY0);
+    if(!isCtrlZ0) return;   // ← 🎯 ده السطر اللي بيحل المشكلة
+  }
+
   // تجاهل لو في input عادي خارج الجدول
   const tag = (e.target.tagName || '').toLowerCase();
   const inGrid = e.target.matches && e.target.matches('#gridBody td[contenteditable]');
@@ -2659,9 +2763,9 @@ async function saveAllFromGrid(){
       area: (row[4]||'').trim(),
       address: (row[5]||'').trim(),
       note: '',
-      day: (row[6]||'').trim() || dayFromISO(dateISO),
+      day: dayName,
       date: dateISO,
-      deliveryTime: (row[10]||'').trim(),
+      deliveryTime: (row[10]||'').trim() || 'خلال يومين',
       center: '',
       delegate: '',
       items, shipping, subtotal, total, manual: 0,
@@ -2704,6 +2808,9 @@ async function saveAllFromGrid(){
     const p = state.pages.find(x => x.id === pid);
     if(p) p.next = nextN;
   });
+
+      // لو اليوم مش مكتوب، استخدم اليوم الحالي
+    const dayName = (row[6]||'').trim() || dayFromISO(dateISO);
 
   saveState();
   renderAll();
@@ -2825,14 +2932,14 @@ f_shipping.addEventListener('input', recalc);
 function collectItems(){
   return $$('.item-row', itemsWrap).map(r => ({
     name: r.querySelector('.i-name').value.trim(),
-    qty: num(r.querySelector('.i-qty').value),
-    price: num(r.querySelector('.i-price').value)
+    qty: Math.max(0, num(r.querySelector('.i-qty').value)),
+    price: Math.max(0, num(r.querySelector('.i-price').value))
   })).filter(i => i.name !== '');
 }
 
 function resetForm(){
   f_name.value=''; f_mobile.value=''; f_landline.value=''; f_gov.value=''; f_area.value='';
-  f_address.value=''; f_delivery.value=''; f_note.value='الاتصال قبل الوصول بساعة';
+  f_address.value=''; f_delivery.value='خلال يومين'; f_note.value='الاتصال قبل الوصول بساعة';
   f_center.value=''; f_delegate.value=''; f_shipping.value=0;
   f_date.value = todayISO(); f_day.value = dayFromISO(f_date.value);
   itemsWrap.innerHTML=''; addItemRow(); syncPageFields(); recalc(); f_name.focus();
@@ -2957,21 +3064,23 @@ function renderTable(status){
             🔒 ${money(o.manual)} ج.م
           </div>
         </td>`;
-      } else {
-        // ✏️ قابل للتعديل من الخارج
+              } else {
+        // ✏️ قابل للتعديل من الخارج — type=text عشان يسمح بحرية المسح والكتابة
         accCell = `<td>
           <div class="acc-wrap">
-            <input type="number" class="acc-input" 
-                   value="${o.manual||''}" placeholder="0" 
-                   data-acc-id="${o.id}">
+            <input type="text" inputmode="decimal" class="acc-input" 
+                   value="${o.manualRaw !== undefined ? esc(o.manualRaw) : (o.manual || '')}" 
+                   placeholder="0" 
+                   data-acc-id="${o.id}"
+                   autocomplete="off">
             <button class="acc-eq" data-acc-eq="${o.id}" 
                     title="تأكيد المبلغ وقفله">=</button>
           </div>
         </td>`;
       }
-    }
+    }  // ← 🎯 القوس الناقص اللي بيقفل if(showAcc){}
 
-    return `
+       return `
     <tr data-oid="${o.id}" data-status="${status}" class="${isSel?'selected':''}">
       <td class="col-check"><input type="checkbox" class="row-check" data-status="${status}" data-id="${o.id}" ${isSel?'checked':''}></td>
       <td><span class="code">${esc(o.code)}</span>${settledMark}</td>
@@ -3058,8 +3167,9 @@ document.addEventListener('click', e => {
   const id = tr.dataset.oid;
   const status = tr.dataset.status;
   const hasModifier = e.ctrlKey || e.metaKey || e.shiftKey;
-  const hasSelection = selected.size > 0;
-  if(!hasSelection && !hasModifier) return;
+
+  // 🎯 التحديد بـ Ctrl/Meta أو Shift فقط — الضغطة العادية متعمل حاجة
+  if(!hasModifier) return;
 
   if(e.shiftKey && lastClickedId){
     const tbody = tr.parentElement;
@@ -3070,12 +3180,8 @@ document.addEventListener('click', e => {
     if(a >= 0 && b >= 0){
       const from = Math.min(a,b), to = Math.max(a,b);
       for(let i = from; i <= to; i++) selected.add(ids[i]);
-    } else {
-      if(selected.has(id)) selected.delete(id); else selected.add(id);
     }
   } else if(e.ctrlKey || e.metaKey){
-    if(selected.has(id)) selected.delete(id); else selected.add(id);
-  } else {
     if(selected.has(id)) selected.delete(id); else selected.add(id);
   }
   lastClickedId = id;
@@ -3239,20 +3345,29 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   if(e.target.matches('.acc-input')){
     const o = state.orders.find(x => x.id === e.target.dataset.accId);
-    // ✏️ يُسمح بالتعديل فقط لو مش مسوّى ومش مقفول
     if(o && !o.settled && !o.accountLocked){
-      const raw = e.target.value.trim();
+      const raw = e.target.value; // ← بدون trim، عشان نحفظ اللي المستخدم بيكتبه
+
+      // 🔑 احفظ النص الخام كما هو (ده اللي بيتعرض في الحقل)
+      o.manualRaw = raw;
+
+      // 🎯 احسب القيمة الرقمية في الخلفية (للحسابات)
+      const hasMinus = /[-−–]/.test(raw);
       let v = 0;
       if(raw.includes('+')){
         v = raw.split('+').reduce((s,x)=>s+num(x),0);
       } else {
         v = num(raw);
       }
+      // لو مفيش "-" والقيمة سالبة → خليها موجبة
+      if(!hasMinus && v < 0) v = Math.abs(v);
       o.manual = v;
+
       saveState();
       const st = $('.view.active')?.id;
       const statusMap = { 'view-orders':'pending', 'view-delivered':'delivered', 'view-cancelled':'cancelled' };
       if(st && statusMap[st]) updateBulkBar(statusMap[st]);
+      // ⚠️ لا نستدعي renderAll/renderTable هنا عشان مايتلغيش اللي المستخدم بيكتبه
     }
   }
 });
@@ -3266,7 +3381,7 @@ document.addEventListener('click', e => {
     toast('🔒 هذا الطلب تم تسويته بالفعل');
     return;
   }
-  
+
   // لو مقفول بالفعل → افتح التفاصيل
   if(o.accountLocked){
     openOrderView(o.id);
@@ -3287,6 +3402,7 @@ document.addEventListener('click', e => {
   if(!val){ toast('⚠️ اكتب مبلغ صحيح'); inp.focus(); return; }
 
   o.manual = val;
+  o.manualRaw = undefined; // ← امسح النص الخام (بعد القفل مفيش داعي ليه)
   o.accountLocked = true;
   o.accountedAt = new Date().toISOString();
   saveState(); renderAll();
