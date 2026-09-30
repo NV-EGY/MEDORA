@@ -112,10 +112,22 @@ table.excel-grid td[contenteditable]{
   padding:7px 8px;outline:none;min-height:32px;cursor:text;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px
 }
-table.excel-grid td[contenteditable]:focus{
-  background:#fffbeb;box-shadow:inset 0 0 0 2px var(--primary);
-  white-space:normal;overflow:visible;max-width:none;z-index:10;position:relative
+/* ═══ EDITING MODE (فقط عند الدخول في التعديل) ═══ */
+table.excel-grid td.cell-editing{
+  background:#fffbeb!important;
+  box-shadow:inset 0 0 0 2px var(--primary)!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  max-width:none!important;
+  z-index:20!important;
+  position:relative;
+  outline:none;
+  cursor:text;
 }
+table.excel-grid td.cell-editing:empty::before{ content: none; }
+
+/* منع الإطار الافتراضي عند التركيز بدون تعديل */
+table.excel-grid td:focus{ outline:none; }
 table.excel-grid td[contenteditable]:empty::before{content:attr(data-ph);color:#cbd5e1;font-style:italic;font-size:11.5px}
 table.excel-grid tbody tr:nth-child(even) td{background:#fafbff}
 table.excel-grid tbody tr:nth-child(even) td:focus{background:#fffbeb}
@@ -131,6 +143,50 @@ td.row-del button{border:0;background:transparent;color:#cbd5e1;cursor:pointer;f
 td.row-del button:hover{background:#fee2e2;color:#b91c1c}
 td.cell-multi{background:#f0fdf4!important}
 td.cell-multi:focus{background:#dcfce7!important}
+/* ═══ EXCEL-LIKE CELL CURSOR ═══ */
+table.excel-grid td.cell-cursor {
+  background: #bfdbfe !important;
+  box-shadow: inset 0 0 0 2px #1d4ed8 !important;
+  position: relative;
+  z-index: 5;
+}
+table.excel-grid td.cell-cursor::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 7px;
+  height: 7px;
+  background: #1d4ed8;
+  border-radius: 1px;
+  pointer-events: none;
+}
+/* ═══ MARCHING ANTS (نسخ/قص زي Excel) ═══ */
+table.excel-grid td.cell-copied,
+table.excel-grid td.cell-cut-source {
+  position: relative;
+}
+table.excel-grid td.cell-copied::before,
+table.excel-grid td.cell-cut-source::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px dashed #1d4ed8;
+  pointer-events: none;
+  z-index: 3;
+  animation: marching-ants 0.7s linear infinite;
+}
+table.excel-grid td.cell-cut-source::before {
+  border-color: #dc2626;
+}
+table.excel-grid td.cell-cut-source {
+  opacity: 0.5;
+}
+@keyframes marching-ants {
+  0%   { border-color: #1d4ed8; }
+  50%  { border-color: #93c5fd; }
+  100% { border-color: #1d4ed8; }
+}
 /* EXCEL-LIKE SELECTION */
 table.excel-grid td.cell-selected{
   background:#dbeafe!important;
@@ -377,6 +433,33 @@ table.inv-tbl .c{text-align:center}
   body.bulk-printing #invoicePaper, body.bulk-printing #invoicePaper *{visibility:hidden!important}
   body.bulk-printing #invoiceModal{display:none!important}
 }
+
+/* ═══ OUTER RANGE MARQUEE (نمل ماشي على الحافة) ═══ */
+table.excel-grid td.range-marquee {
+  position: relative;
+}
+table.excel-grid td.range-marquee.m-top    { box-shadow: inset 0  2px 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-bottom { box-shadow: inset 0 -2px 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-left   { box-shadow: inset  2px 0 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-right  { box-shadow: inset -2px 0 0 0 #1d4ed8 !important; }
+
+/* لو الخلية على حافتين في نفس الوقت */
+table.excel-grid td.range-marquee.m-top.m-left    { box-shadow: inset  2px 2px 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-top.m-right   { box-shadow: inset -2px 2px 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-bottom.m-left { box-shadow: inset  2px -2px 0 0 #1d4ed8 !important; }
+table.excel-grid td.range-marquee.m-bottom.m-right{ box-shadow: inset -2px -2px 0 0 #1d4ed8 !important; }
+
+/* قص — أحمر */
+table.excel-grid td.range-marquee.cut.m-top    { box-shadow: inset 0  2px 0 0 #dc2626 !important; }
+table.excel-grid td.range-marquee.cut.m-bottom { box-shadow: inset 0 -2px 0 0 #dc2626 !important; }
+table.excel-grid td.range-marquee.cut.m-left   { box-shadow: inset  2px 0 0 0 #dc2626 !important; }
+table.excel-grid td.range-marquee.cut.m-right  { box-shadow: inset -2px 0 0 0 #dc2626 !important; }
+
+/* شفافية على المصدر لو قص */
+table.excel-grid td.range-marquee.cut {
+  opacity: 0.55;
+}
+
 </style>
 
 <!-- ============================================================
@@ -537,7 +620,7 @@ table.inv-tbl .c{text-align:center}
 
   <!-- INDIVIDUAL FORM -->
   <section class="view" id="view-new">
-    <form id="orderForm" autocomplete="off">
+    <form id="orderForm" autocomplete="off" novalidate>
       <div class="card">
         <div class="card-head"><h3>بيانات الصفحة / المول</h3></div>
         <div class="grid">
@@ -865,6 +948,20 @@ table.inv-tbl .c{text-align:center}
   <option>خلال يومين</option><option>ثلاثة ايام</option><option>خلال 24 ساعة</option>
   <option>خلال أسبوع</option><option>استلام فوري</option>
 </datalist>
+<!-- WARNING MODAL -->
+<div class="modal" id="warningModal">
+  <div class="modal-inner" style="max-width:760px">
+    <div class="modal-bar">
+      <h3>⚠️ تحذيرات قبل الحفظ</h3>
+      <button class="modal-x" data-close-warning>✕</button>
+    </div>
+    <div style="padding:18px;max-height:70vh;overflow-y:auto" id="warningBody"></div>
+    <div class="modal-actions">
+      <button class="btn grey" data-close-warning>✕ إلغاء الحفظ</button>
+      <button class="btn primary" id="continueSaveBtn">✅ متابعة الحفظ رغم التحذيرات</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -1140,7 +1237,7 @@ function renderGrid(){
       let cls = '';
       if(c.key === 'product' || c.key === 'qty' || c.key === 'price') cls = 'cell-multi';
       const val = row[ci] || '';
-      return `<td class="${cls}" contenteditable="true" data-row="${ri}" data-col="${ci}" data-ph="${esc(c.ph||'')}">${esc(val)}</td>`;
+      return `<td class="${cls}" contenteditable="false" tabindex="-1" data-row="${ri}" data-col="${ci}" data-ph="${esc(c.ph||'')}">${esc(val)}</td>`;
     }).join('');
 
     // ⬇️ السطر اللي كان ناقص — بيرجع الصف كامل
@@ -1182,67 +1279,362 @@ $('#gridBody').addEventListener('focusout', e => {
 });
 
 $('#gridBody').addEventListener('keydown', e => {
-  const td = e.target.closest('td[contenteditable]');
+  const td = e.target.closest('td[data-row]');
   if(!td) return;
   const r = +td.dataset.row, c = +td.dataset.col;
+
+  // ═══════════════ EDIT MODE ═══════════════
+  if(isEditing(r, c)){
+    // Enter — احفظ وانتقل
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      exitEditMode(true);
+      if(e.shiftKey){
+        focusCell(Math.max(r-1, 0), c);
+      } else {
+        if(r === gridData.length - 1){ gridData.push(newEmptyRow()); renderGrid(); }
+        focusCell(r+1, c);
+      }
+      return;
+    }
+    // Tab — احفظ وانتقل يمين/شمال
+    if(e.key === 'Tab'){
+      e.preventDefault();
+      exitEditMode(true);
+      const nc = e.shiftKey ? c - 1 : c + 1;
+      if(nc < 0){
+        if(r > 0) focusCell(r-1, COLS-1, true);
+      } else if(nc >= COLS){
+        if(r < gridData.length-1) focusCell(r+1, 0, false);
+      } else {
+        focusCell(r, nc, e.shiftKey);
+      }
+      return;
+    }
+    // Escape — تراجع عن التعديل
+    if(e.key === 'Escape'){
+      e.preventDefault();
+      exitEditMode(false);
+      focusCell(r, c);
+      return;
+    }
+    // أي مفتاح تاني (حروف، أسهم، إلخ) — سيبه للمتصفح عادي
+    return;
+  }
+
+  // ═══════════════ NOT EDITING ═══════════════
+
+  // F2 — ادخل التعديل (مع الاحتفاظ بالمحتوى)
+  if(e.key === 'F2'){
+    e.preventDefault();
+    enterEditMode(r, c);
+    return;
+  }
+
+  // 🎯 أي حرف قابل للطباعة → ادخل التعديل مع استبدال المحتوى بيه
+  if(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+    e.preventDefault();
+    enterEditMode(r, c, { replaceWith: e.key });
+    return;
+  }
+
+  // 🎯 Delete/Backspace على خلية واحدة → فرّغها بدون تعديل
+  if(e.key === 'Delete' || e.key === 'Backspace'){
+    const hasMultiSel = dragStart && dragEnd &&
+                       !(dragStart.r === dragEnd.r && dragStart.c === dragEnd.c);
+    if(!hasMultiSel){
+      e.preventDefault();
+      e.stopPropagation();
+      pushUndoSnapshot();
+      if(!gridData[r]) gridData[r] = newEmptyRow();
+      gridData[r][c] = '';
+      if(td) td.textContent = '';
+      return;
+    }
+    return;  // التحديد المتعدد يتعامل معاه الـ document handler
+  }
+
+  // ─── Enter / Shift+Enter ───
   if(e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();
-    if(r === gridData.length - 1) { gridData.push(newEmptyRow()); renderGrid(); }
-    focusCell(r+1, c);
-  } else if(e.key === 'ArrowDown' && e.ctrlKey){
-    e.preventDefault(); focusCell(Math.min(r+1, gridData.length-1), c);
-  } else if(e.key === 'ArrowUp' && e.ctrlKey){
-    e.preventDefault(); focusCell(Math.max(r-1, 0), c);
+    focusCell(Math.max(r-1, 0), c);
+    return;
+  }
+
+  // ─── Tab / Shift+Tab (نفس Excel: يلف على الصفوف) ───
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const nc = e.shiftKey ? c - 1 : c + 1;
+    if(nc < 0){
+      if(r > 0) focusCell(r-1, COLS-1, true);
+    } else if(nc >= COLS){
+      if(r < gridData.length-1) focusCell(r+1, 0, false);
+    } else {
+      focusCell(r, nc, e.shiftKey);
+    }
+    return;
+  }
+
+  // ─── Arrow Down/Up (دائماً بين الخلايا زي Excel) ───
+   if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    if(e.shiftKey && dragStart){
+      dragEnd = { r: Math.min(r+1, gridData.length-1), c: dragEnd.c };
+      highlightSelection();
+      focusCell(dragEnd.r, dragEnd.c, false, { keepSelection: true });
+    } else {
+      focusCell(Math.min(r+1, gridData.length-1), c);
+    }
+    return;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    if(e.shiftKey && dragStart){
+      dragEnd = { r: Math.max(r-1, 0), c: dragEnd.c };
+      highlightSelection();
+     focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
+    } else {
+      focusCell(Math.max(r-1, 0), c);
+    }
+    return;
+  }
+
+  // ─── Arrow Left/Right (بين الخلايا لو المؤشر على الحرف الأول/الأخير) ───
+  if(e.key === 'ArrowLeft'){
+    if(e.shiftKey && dragStart){
+      e.preventDefault();
+      dragEnd = { r: dragEnd.r, c: Math.max(c-1, 0) };
+      highlightSelection();
+      focusCell(dragEnd.r, dragEnd.c, true, { keepSelection: true });
+      return;
+    }
+    const sel = window.getSelection();
+    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+    const atStart = !range || (range.collapsed && range.startOffset === 0);
+    if(atStart && c > 0){
+      e.preventDefault();
+      focusCell(r, c-1, true);
+    }
+    return;
+  }
+  if(e.key === 'ArrowRight'){
+    if(e.shiftKey && dragStart){
+      e.preventDefault();
+      dragEnd = { r: dragEnd.r, c: Math.min(c+1, COLS-1) };
+      highlightSelection();
+      focusCell(dragEnd.r, dragEnd.c, false, { keepSelection: true });
+      return;
+    }
+    const sel = window.getSelection();
+    const range = sel.rangeCount ? sel.getRangeAt(0) : null;
+    const textLen = (td.textContent || '').length;
+    const atEnd = !range || (range.collapsed && range.startOffset >= textLen);
+    if(atEnd && c < COLS - 1){
+      e.preventDefault();
+      focusCell(r, c+1, false);
+    }
+    return;
+  }
+
+  // ─── Home / End ───
+  if(e.key === 'Home' && !e.ctrlKey){
+    e.preventDefault();
+    focusCell(r, 0, false);
+    return;
+  }
+  if(e.key === 'End' && !e.ctrlKey){
+    e.preventDefault();
+    focusCell(r, COLS-1, true);
+    return;
+  }
+
+  // ─── Ctrl+Home / Ctrl+End ───
+  if(e.key === 'Home' && (e.ctrlKey || e.metaKey)){
+    e.preventDefault();
+    focusCell(0, 0, false);
+    return;
+  }
+  if(e.key === 'End' && (e.ctrlKey || e.metaKey)){
+    e.preventDefault();
+    focusCell(gridData.length-1, COLS-1, true);
+    return;
+  }
+
+  // ─── Ctrl+ArrowDown / Ctrl+ArrowUp (التنقل السريع) ───
+  if(e.key === 'ArrowDown' && e.ctrlKey){
+    e.preventDefault();
+    focusCell(gridData.length-1, c);
+    return;
+  }
+  if(e.key === 'ArrowUp' && e.ctrlKey){
+    e.preventDefault();
+    focusCell(0, c);
+    return;
   }
 });
-function focusCell(r, c){
+function focusCell(r, c, atEnd, opts){
   const td = $(`#gridBody td[data-row="${r}"][data-col="${c}"]`);
-  if(td){ td.focus(); td.scrollIntoView({block:'nearest', inline:'nearest'}); }
+  if(!td) return;
+
+  td.focus();
+
+  // 🎯 ضع المؤشر في أول أو آخر النص
+  try {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(td);
+    if(atEnd) range.collapse(false);
+    else range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(_) {}
+
+  // 🎯 أضف الـ cell-cursor
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+  td.classList.add('cell-cursor');
+  selectedCell = { r, c };
+
+  // 🔑 لو مش امتداد للتحديد — حدّث الـ dragStart/dragEnd
+  // (عشان Ctrl+C ينسخ الخلية اللي إحنا فيها)
+  if(!opts || !opts.keepSelection){
+    dragStart = { r, c };
+    dragEnd   = { r, c };
+    clearSelectionHighlight();
+  }
+
+  td.scrollIntoView({block:'nearest', inline:'nearest'});
 }
 
-$('#gridTable').addEventListener('paste', e => {
-  const td = e.target.closest('td[contenteditable]');
+/* =========================================================
+   📥 PASTE — يعالج النظام + الجدول نفسه بنفس المسار
+   ========================================================= */
+document.addEventListener('paste', async (e) => {
+  // تجاهل لو مش في الجدول
+  const td = document.activeElement?.closest?.('#gridBody td[data-row]')
+           || e.target.closest?.('#gridBody td[data-row]');
   if(!td) return;
-  e.preventDefault();
-  let text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
-  if(!text) return;
-  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  let rows = text.split('\n');
-  while(rows.length && rows[rows.length-1] === '') rows.pop();
-  if(!rows.length) return;
-  const firstCells = rows[0].split('\t');
-  const looksLikeHeader = firstCells.some(c =>
-    c.includes('كود الطلب') || c.includes('اسم العميل') || c.includes('اسم المول') || c.includes('المحمول'));
-  if(looksLikeHeader && rows.length > 1) rows.shift();
-      let startRow = +td.dataset.row;
-  let startCol = +td.dataset.col;
+  const targetR = +td.dataset.row, targetC = +td.dataset.col;
 
-  while(gridData.length < startRow + rows.length) gridData.push(newEmptyRow());
-  let filled = 0;
-  rows.forEach((rowText, ri) => {
-    const cells = rowText.split('\t');
-    cells.forEach((val, ci) => {
-      const c = startCol + ci;
-      if(c >= 0 && c < COLS){
-               let v = val.trim();
-        if(c === 1 || c === 2) v = normalizePhone(v);
-        gridData[startRow + ri][c] = v;
-        filled++;
+  // لو إحنا في وضع التعديل على نفس الخلية → سيبه للمتصفح (لصق نص عادي)
+  if(editingCell && editingCell.r === targetR && editingCell.c === targetC){
+    return; // native paste in the cell
+  }
+
+  e.preventDefault();
+
+  let data = null;
+
+  // ═══════════════════════════════════════════════════════════
+  // 🎯 1) الأولوية للـ INTERNAL clipboard
+  //    (لأنه بيحتفظ بالخلايا كوحدات كاملة مع كل بياناتها)
+  // ═══════════════════════════════════════════════════════════
+  if(clipboard && clipboard.data && clipboard.data.length){
+    data = clipboard.data.map(row => row.map(v => v ?? ''));
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🎯 2) لو مفيش internal، اقرأ من SYSTEM clipboard
+  // ═══════════════════════════════════════════════════════════
+  if(!data){
+    const cd = e.clipboardData || window.clipboardData;
+    if(!cd) return;
+
+    // جرب HTML الأول (Excel / Google Sheets)
+    let html = '';
+    try { html = cd.getData('text/html') || ''; } catch(_){}
+
+    if(html && html.includes('<table')){
+      data = parseHTMLTable(html);
+    }
+
+    // لو مفيش، استعمل النص العادي
+    if(!data){
+      let text = '';
+      try { text = cd.getData('text/plain') || ''; } catch(_){}
+      if(!text) return;
+      data = parseTSV(text);
+    }
+  }
+
+  if(!data || !data.length) return;
+
+  // 🎯 لو ده لصق بعد قص داخلي → امسح المصدر
+  if(clipboardMode === 'cut' && clipboardSourceRange){
+    pushUndoSnapshot();
+    const src = clipboardSourceRange;
+    for(let r = src.r1; r <= src.r2; r++){
+      for(let c = src.c1; c <= src.c2; c++){
+        const inside = r >= targetR && r < targetR + data.length
+                    && c >= targetC && c < targetC + (data[0]?.length || 0);
+        if(!inside && gridData[r]) gridData[r][c] = '';
       }
-    });
-  });
+    }
+    clipboardMode = 'copy';
+    clipboardSourceRange = null;
+  } else {
+    pushUndoSnapshot();
+  }
+
+  // 🎯 وسّع الجدول لو اللصق أطول
+  while(gridData.length < targetR + data.length){
+    gridData.push(newEmptyRow());
+  }
+
+  // 🎯 الصق
+  let filled = 0;
+  for(let i = 0; i < data.length; i++){
+    for(let j = 0; j < data[i].length; j++){
+      const r = targetR + i, c = targetC + j;
+      if(r >= gridData.length || c >= COLS) continue;
+      if(isAutoCell(c)) continue;
+      let v = data[i][j];
+      if(c === 1 || c === 2) v = normalizePhone(v);
+      gridData[r][c] = v;
+      filled++;
+    }
+  }
+
+  clearCopyMarks();
   renderGrid();
-  toast(`📋 تم لصق ${rows.length} صف (${filled} خلية)`);
-  setTimeout(() => focusCell(startRow, startCol), 50);
+
+  // 🎯 التحديد بيتنقل للمنطقة الملصوقة
+  dragStart = { r: targetR, c: targetC };
+  dragEnd   = { r: targetR + data.length - 1, c: targetC + (data[0]?.length || 1) - 1 };
+  highlightSelection();
+
+  // 🎯 ركّز على أول خلية ملصوقة
+  const anchor = getCellEl(targetR, targetC);
+  if(anchor){
+    try {
+      anchor.focus({preventScroll:true});
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(anchor);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch(_) {}
+  }
+
+  // 🎯 cell-cursor
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+  if(anchor) anchor.classList.add('cell-cursor');
+  selectedCell = { r: targetR, c: targetC };
+
+  toast(`📌 تم لصق ${data.length}×${data[0]?.length || 0} خلية`);
 });
 
-$('#gridBody').addEventListener('click', e => {
-  const btn = e.target.closest('[data-delrow]');
-  if(!btn) return;
-  const r = +btn.dataset.delrow;
-  if(gridData.length === 1){ gridData[0] = newEmptyRow(); }
-  else { gridData.splice(r, 1); }
-  renderGrid();
+/* 🖱️ Double-click = Edit Mode (زي Excel) */
+$('#gridBody').addEventListener('dblclick', e => {
+  const td = e.target.closest('td[data-row]');
+  if(!td) return;
+  const c = +td.dataset.col;
+  if(isAutoCell(c)) return;
+  const r = +td.dataset.row;
+  e.preventDefault();
+  enterEditMode(r, c);   // يحتفظ بالمحتوى، المؤشر في الآخر
 });
 
 $('#addRowBtn').addEventListener('click', () => {
@@ -1287,41 +1679,186 @@ let clipboardSourceRange = null;
 let undoStack = [];
 let redoStack = [];
 const UNDO_LIMIT = 60;
+let selectedCell = null;
 let cellFocusSnapshot = null;
+let editingCell = null;         
+let editingCellBackup = '';  
 
 function snapshotGrid(){ return JSON.stringify(gridData); }
 
+/* =========================================================
+   ✏️ EDIT MODE HELPERS
+   ========================================================= */
+function isEditing(r, c){
+  return !!editingCell && editingCell.r === r && editingCell.c === c;
+}
+
+function enterEditMode(r, c, opts = {}){
+  const td = getCellEl(r, c);
+  if(!td) return;
+
+  // لو فيه خلية تانية بتتعدل — اقفلها وانتقل
+  if(editingCell && (editingCell.r !== r || editingCell.c !== c)){
+    exitEditMode(true);
+  }
+
+  // لو داخل بالكتابة من غير تعديل — استبدل المحتوى
+  if(opts.replaceWith !== undefined){
+    if(!gridData[r]) gridData[r] = newEmptyRow();
+    td.textContent = opts.replaceWith;
+    gridData[r][c] = opts.replaceWith;
+  }
+
+  editingCellBackup = gridData[r] ? (gridData[r][c] || '') : '';
+  editingCell = { r, c };
+  selectedCell = { r, c };
+
+  td.setAttribute('contenteditable', 'true');
+  td.classList.add('cell-editing');
+
+  try { td.focus({preventScroll:true}); } catch(_) {}
+
+  // ضع المؤشر في آخر النص (أو في الأول لو مطلوب)
+  try {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(td);
+    range.collapse(opts.cursorAtStart ? true : false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(_) {}
+}
+
+function exitEditMode(save){
+  if(!editingCell) return;
+  const { r, c } = editingCell;
+  const td = getCellEl(r, c);
+  if(td){
+    if(save === false){
+      // تراجع عن التعديل
+      if(!gridData[r]) gridData[r] = newEmptyRow();
+      td.textContent = editingCellBackup || '';
+      gridData[r][c] = editingCellBackup || '';
+    } else {
+      // احفظ
+      if(!gridData[r]) gridData[r] = newEmptyRow();
+      gridData[r][c] = td.textContent.trim();
+    }
+    td.setAttribute('contenteditable', 'false');
+    td.classList.remove('cell-editing');
+  }
+  editingCell = null;
+  editingCellBackup = '';
+}
+
+function clearCopyMarks(){
+  document.querySelectorAll('#gridBody td').forEach(el => {
+    el.classList.remove(
+      'cell-copied', 'cell-cut-source',
+      'range-marquee',
+      'm-top', 'm-bottom', 'm-left', 'm-right',
+      'cut'
+    );
+  });
+}
+
+/* 🎯 إطار "نمل ماشي" على الحافة الخارجية للنطاق زي Excel */
+function applyRangeMarquee(r1, c1, r2, c2, isCut){
+  // نظّف الأول
+  document.querySelectorAll('#gridBody td').forEach(el => {
+    el.classList.remove('range-marquee','m-top','m-bottom','m-left','m-right','cut');
+  });
+
+  for(let r = r1; r <= r2; r++){
+    for(let c = c1; c <= c2; c++){
+      const el = getCellEl(r, c);
+      if(!el) continue;
+      el.classList.add('range-marquee');
+      if(isCut) el.classList.add('cut');
+      if(r === r1) el.classList.add('m-top');
+      if(r === r2) el.classList.add('m-bottom');
+      // في RTL: c1 هو اليمين، c2 هو الشمال
+      if(c === c1) el.classList.add('m-right');
+      if(c === c2) el.classList.add('m-left');
+    }
+  }
+}
+
 function pushUndoSnapshot(snap){
   const s = snap || snapshotGrid();
-  if(undoStack.length && undoStack[undoStack.length-1] === s) return;
+  if(undoStack.length && undoStack[undoStack.length-1] === s){
+    // حتى لو الـ snapshot مكرر، نظّف الـ cellFocusSnapshot
+    cellFocusSnapshot = null;
+    return;
+  }
   undoStack.push(s);
   if(undoStack.length > UNDO_LIMIT) undoStack.shift();
   redoStack.length = 0;
+  
+  // 🧹 مهم جداً: بمجرد ما دفعنا snapshot، امسح cellFocusSnapshot
+  // عشان لو focusout اتطلق بعدين (بسبب renderGrid)، مايدفعش snapshot زيادة
+  cellFocusSnapshot = null;
 }
 
 function applySnapshot(json){
   const arr = JSON.parse(json);
-  while(arr.length < 20) arr.push(newEmptyRow());
+  // ✅ لا نضيف صفوف وهمية — نرجع بالظبط زي ما كان وقت الـ snapshot
+  // (لو الجدول كان فيه 1 صف، يرجع 1 صف — لو 50 صف، يرجع 50)
+  if(!arr.length) arr.push(newEmptyRow());  // حماية فقط لو snapshot فاضي تماماً
   gridData = arr;
   renderGrid();
 }
 
 function doUndo(){
+  // 💾 احفظ أي تعديل معلّق الأول
+  if(cellFocusSnapshot){
+    const cur = snapshotGrid();
+    if(cellFocusSnapshot !== cur){
+      pushUndoSnapshot(cellFocusSnapshot);
+    }
+    cellFocusSnapshot = null;
+  }
+
   if(!undoStack.length){ toast('⚠️ لا يوجد شيء للتراجع عنه'); return; }
+
   redoStack.push(snapshotGrid());
   applySnapshot(undoStack.pop());
-  clearSelectionHighlight();
+
+   clearSelectionHighlight();
+  clearCopyMarks();   // 🧹 امسح علامات النسخ/القص
   dragStart = null; dragEnd = null;
+  cellFocusSnapshot = null;
+  selectedCell = null;
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+
   toast('↩️ تم التراجع');
 }
 
 function doRedo(){
+  // 💾 احفظ أي تعديل معلّق الأول
+  if(cellFocusSnapshot){
+    const cur = snapshotGrid();
+    if(cellFocusSnapshot !== cur){
+      pushUndoSnapshot(cellFocusSnapshot);
+    }
+    cellFocusSnapshot = null;
+  }
+
   if(!redoStack.length){ toast('⚠️ لا يوجد شيء للأمام'); return; }
+
   undoStack.push(snapshotGrid());
   applySnapshot(redoStack.pop());
-  clearSelectionHighlight();
+
+   clearSelectionHighlight();
+  clearCopyMarks();   // 🧹 امسح علامات النسخ/القص
   dragStart = null; dragEnd = null;
-  toast('↪️ تم التقدّم');
+  cellFocusSnapshot = null;
+  selectedCell = null;
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+
+  toast('↩️ تم التراجع');
 }
 
 function getCellEl(r, c){
@@ -1359,32 +1896,97 @@ function getActiveCell(){
   return null;
 }
 
-// -------- Mouse drag selection --------
 $('#gridBody').addEventListener('mousedown', e => {
-  const td = e.target.closest('td[contenteditable]');
+  const td = e.target.closest('td[data-row]');
   if(!td) return;
-  // لا تحدد أعمدة الـ auto
   const c = +td.dataset.col;
   if(isAutoCell(c)) return;
+  const r = +td.dataset.row;
+
+  // لو فيه خلية تانية في وضع التعديل — اقفلها
+  if(editingCell && (editingCell.r !== r || editingCell.c !== c)){
+    exitEditMode(true);
+  }
+
+  // لو بتضغط على الخلية اللي أصلاً في وضع التعديل — اسمح بالـ native (لتحريك المؤشر)
+  if(editingCell && editingCell.r === r && editingCell.c === c){
+    return;
+  }
+
+  // 🎯 امنع الـ native focus (منع ظهور مؤشر الكتابة على ضغطة واحدة)
+  e.preventDefault();
+
+  // 🎯 بس ركّز الخلية عشان لوحة المفاتيح تشتغل
+  try { td.focus({preventScroll:true}); } catch(_) {}
+
+  // 🎯 ضع الـ cell-cursor
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+  td.classList.add('cell-cursor');
+  selectedCell = { r, c };
+
   clearSelectionHighlight();
-  dragStart = { r: +td.dataset.row, c };
+  dragStart = { r, c };
   dragEnd = { ...dragStart };
   isDragging = true;
 });
 
+/* 🖱️ اضغط برّه الجدول = اقفل التعديل */
+document.addEventListener('mousedown', e => {
+  if(!editingCell) return;
+  if(e.target.closest('#gridBody')) return;
+  exitEditMode(true);
+});
+
+/* ═══ AUTO-SCROLL helpers ═══ */
+let _autoScrollRAF = null;
+let _autoScrollVel = { x: 0, y: 0 };
+
+function stopAutoScroll(){
+  if(_autoScrollRAF){
+    cancelAnimationFrame(_autoScrollRAF);
+    _autoScrollRAF = null;
+  }
+  _autoScrollVel = { x: 0, y: 0 };
+}
+
+function runAutoScroll(){
+  const scroller = document.querySelector('.excel-scroll');
+  if(!scroller || (!_autoScrollVel.x && !_autoScrollVel.y)){ stopAutoScroll(); return; }
+  scroller.scrollLeft += _autoScrollVel.x;
+  scroller.scrollTop  += _autoScrollVel.y;
+  _autoScrollRAF = requestAnimationFrame(runAutoScroll);
+}
+
 document.addEventListener('mousemove', e => {
   if(!isDragging) return;
   document.body.classList.add('dragging-cells');
+
+  // 🎯 Auto-scroll لو المستخدم قرب من حواف الجدول
+  const scroller = document.querySelector('.excel-scroll');
+  if(scroller){
+    const rect = scroller.getBoundingClientRect();
+    const zone = 60;    // المنطقة الحساسة
+    const speed = 14;   // سرعة التمرير
+    let vx = 0, vy = 0;
+    if(e.clientX < rect.left + zone)   vx = -speed;
+    if(e.clientX > rect.right - zone)  vx =  speed;
+    if(e.clientY < rect.top + zone)    vy = -speed;
+    if(e.clientY > rect.bottom - zone) vy =  speed;
+    _autoScrollVel = { x: vx, y: vy };
+    if((vx || vy) && !_autoScrollRAF) _autoScrollRAF = requestAnimationFrame(runAutoScroll);
+    if(!vx && !vy) stopAutoScroll();
+  }
+
   const el = document.elementFromPoint(e.clientX, e.clientY);
   if(!el) return;
-  const td = el.closest && el.closest('#gridBody td[contenteditable]');
+  const td = el.closest && el.closest('#gridBody td[data-row]');
   if(!td) return;
   const r = +td.dataset.row, c = +td.dataset.col;
   if(isAutoCell(c)) return;
   if(dragEnd.r !== r || dragEnd.c !== c){
     dragEnd = { r, c };
     highlightSelection();
-    // امنع التمرير الافتراضي
     e.preventDefault();
   }
 });
@@ -1392,20 +1994,103 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mouseup', e => {
   if(!isDragging) return;
   isDragging = false;
+  stopAutoScroll();   // 🛑 وقف الـ auto-scroll
   document.body.classList.remove('dragging-cells');
 
-  if(dragStart && dragEnd && dragStart.r === dragEnd.r && dragStart.c === dragEnd.c){
+   if(dragStart && dragEnd && dragStart.r === dragEnd.r && dragStart.c === dragEnd.c){
     // ضغطة واحدة — اسمح بالتعديل العادي
     clearSelectionHighlight();
-    dragStart = null; dragEnd = null;
+    // 🔑 لا نمسح dragStart/dragEnd — عشان Ctrl+C/X يشتغلوا على الخلية الواحدة
   } else {
-    // تحديد متعدد — امنع نص
+    // 🎯 تحديد متعدد — امنع نص وظبّط التحديد
     try { window.getSelection()?.removeAllRanges(); } catch(_){}
     highlightSelection();
+    
+    // 🔑 ركّز على أول خلية (dragStart) عشان Ctrl+C/V يشتغلوا فوراً
+    const anchor = getCellEl(dragStart.r, dragStart.c);
+    if(anchor){
+      setTimeout(() => {
+        try {
+          anchor.focus({preventScroll:true});
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(anchor);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } catch(_) {}
+      }, 0);
+    }
   }
 });
 
-// -------- Copy / Cut / Paste / Delete --------
+/* =========================================================
+   📋 CLIPBOARD — دعم النظام + TSV + HTML
+   ========================================================= */
+function buildTSV(data){
+  return data.map(row =>
+    row.map(cell => {
+      let s = String(cell ?? '');
+      // Excel style: escape tabs/newlines/quotes
+      if(s.includes('\t') || s.includes('\n') || s.includes('"')){
+        s = '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join('\t')
+  ).join('\n');
+}
+
+function buildHTMLTable(data){
+  return `<table>` +
+    data.map(row => '<tr>' + row.map(cell => `<td>${esc(cell)}</td>`).join('') + '</tr>').join('') +
+    `</table>`;
+}
+
+async function writeToSystemClipboard(data){
+  const tsv = buildTSV(data);
+  const html = buildHTMLTable(data);
+
+  // ✅ المحاولة الأولى: Clipboard API (احترافي + بيدعم HTML)
+  try {
+    if(navigator.clipboard && window.ClipboardItem){
+      const item = new ClipboardItem({
+        'text/plain': new Blob([tsv], {type:'text/plain'}),
+        'text/html':  new Blob([html], {type:'text/html'})
+      });
+      await navigator.clipboard.write([item]);
+      return true;
+    }
+  } catch(e){
+    console.warn('ClipboardItem failed, falling back:', e);
+  }
+
+  // ✅ Fallback: نسخ HTML كـ rich text
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(tsv);
+      return true;
+    }
+  } catch(e){
+    console.warn('writeText failed, falling back to execCommand:', e);
+  }
+
+  // ✅ Fallback أخير: execCommand (شغال في كل المتصفحات)
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  } catch(e){
+    console.error('All clipboard methods failed:', e);
+    return false;
+  }
+}
+
 function copySelection(isCut){
   if(!dragStart || !dragEnd) return;
   const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
@@ -1417,28 +2102,139 @@ function copySelection(isCut){
     }
     data.push(row);
   }
+
+  // 💾 احفظ في الـ internal clipboard
   clipboard = { data, w: c2-c1+1, h: r2-r1+1 };
   clipboardMode = isCut ? 'cut' : 'copy';
   clipboardSourceRange = { r1, c1, r2, c2 };
 
+  // 🎯 اكتب في system clipboard بصيغة Excel (TSV + HTML table)
+  // لو فشل، مش مشكلة — الـ internal clipboard شغال
+  writeToSystemClipboard(data);
+
+  // 🎨 UI feedback
   clearSelectionHighlight();
-  const src = clipboardSourceRange;
-  for(let r = src.r1; r <= src.r2; r++){
-    for(let c = src.c1; c <= src.c2; c++){
+  clearCopyMarks();
+  applyRangeMarquee(r1, c1, r2, c2, isCut);
+
+  for(let r = r1; r <= r2; r++){
+    for(let c = c1; c <= c2; c++){
       const el = getCellEl(r, c);
-      if(el) el.classList.add(isCut ? 'cell-cut' : 'cell-selected');
+      if(el) el.classList.add('cell-selected');
     }
   }
-  const activeEl = getCellEl(dragStart.r, dragStart.c);
-  if(activeEl && !isCut) activeEl.classList.add('cell-active');
+  const activeEl = getCellEl(r1, c1);
+  if(activeEl) activeEl.classList.add('cell-active');
 
-  toast(isCut ? `✂️ تم قص ${clipboard.h}×${clipboard.w}` : `📋 تم نسخ ${clipboard.h}×${clipboard.w}`);
+  // 🎯 ركّز على الخلية الأولى عشان باقي الاختصارات
+  const anchor = getCellEl(r1, c1);
+  if(anchor) anchor.focus({preventScroll:true});
+
+  toast(isCut
+    ? `✂️ تم قص ${clipboard.h}×${clipboard.w} خلية — Ctrl+V للصق`
+    : `📋 تم نسخ ${clipboard.h}×${clipboard.w} خلية — Ctrl+V للصق`);
+}
+
+/* =========================================================
+   🔍 Excel Parsers
+   ========================================================= */
+function parseTSV(text){
+  // تنظيف أولي
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Excel بيحط """ حوالين الخلايا اللي فيها \t أو \n
+  const rows = [];
+  let current = [];
+  let cell = '';
+  let inQuotes = false;
+  let i = 0;
+
+  while(i < text.length){
+    const ch = text[i];
+
+    if(inQuotes){
+      if(ch === '"' && text[i+1] === '"'){
+        cell += '"'; i += 2; continue;
+      }
+      if(ch === '"'){
+        inQuotes = false; i++; continue;
+      }
+      cell += ch; i++; continue;
+    }
+
+    if(ch === '"'){
+      inQuotes = true; i++; continue;
+    }
+    if(ch === '\t'){
+      current.push(cell); cell = ''; i++; continue;
+    }
+    if(ch === '\n'){
+      current.push(cell); rows.push(current);
+      current = []; cell = ''; i++; continue;
+    }
+    cell += ch; i++;
+  }
+  // آخر خلية/صف
+  if(cell !== '' || current.length){
+    current.push(cell);
+    rows.push(current);
+  }
+
+  // تجاهل آخر صف لو فاضي
+  if(rows.length && rows[rows.length-1].every(c => c === '')){
+    rows.pop();
+  }
+
+  // كشف الـ header لو موجود
+  if(rows.length > 1){
+    const first = rows[0].join(' ').toLowerCase();
+    if(first.includes('كود الطلب') || first.includes('اسم العميل')
+       || first.includes('اسم المول') || first.includes('المحمول')){
+      rows.shift();
+    }
+  }
+
+  return rows.map(r => r.map(c => c.trim()));
+}
+
+function parseHTMLTable(html){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+  if(!table) return null;
+
+  const rows = [];
+  table.querySelectorAll('tr').forEach(tr => {
+    const cells = [];
+    tr.querySelectorAll('td, th').forEach(td => {
+      // استبدل <br> بـ \n
+      let txt = td.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+      // شيل باقي الـ HTML
+      const tmp = document.createElement('div');
+      tmp.innerHTML = txt;
+      cells.push((tmp.textContent || '').trim());
+    });
+    rows.push(cells);
+  });
+
+  // كشف الـ header
+  if(rows.length > 1){
+    const first = rows[0].join(' ').toLowerCase();
+    if(first.includes('كود الطلب') || first.includes('اسم العميل')
+       || first.includes('اسم المول') || first.includes('المحمول')){
+      rows.shift();
+    }
+  }
+  return rows;
 }
 
 function pasteClipboard(targetR, targetC){
   if(!clipboard) return;
   pushUndoSnapshot();
   const { data, w, h } = clipboard;
+
+  // 🧹 امسح علامات النسخ/القص
+  clearCopyMarks();
 
   while(gridData.length < targetR + h) gridData.push(newEmptyRow());
 
@@ -1465,7 +2261,33 @@ function pasteClipboard(targetR, targetC){
   }
 
   renderGrid();
-  toast('📌 تم اللصق');
+  
+  // 🎯 بعد اللصق، التحديد بيتنقل للمنطقة الملصوقة (زي Excel)
+  dragStart = { r: targetR, c: targetC };
+  dragEnd   = { r: targetR + h - 1, c: targetC + w - 1 };
+  highlightSelection();
+  
+  // 🎯 ركّز على أول خلية ملصوقة عشان Ctrl+C/V يشتغلوا فوراً
+  const anchor = getCellEl(targetR, targetC);
+  if(anchor){
+    try {
+      anchor.focus({preventScroll:true});
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(anchor);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch(_) {}
+  }
+  
+  // 🎯 ضع الـ cell-cursor على أول خلية ملصوقة
+  document.querySelectorAll('#gridBody td.cell-cursor')
+    .forEach(el => el.classList.remove('cell-cursor'));
+  if(anchor) anchor.classList.add('cell-cursor');
+  selectedCell = { r: targetR, c: targetC };
+
+  toast(`📌 تم لصق ${h}×${w} خلية`);
 }
 
 function deleteSelection(){
@@ -1484,6 +2306,46 @@ function deleteSelection(){
   toast(`🗑️ تم حذف ${count} خلية`);
 }
 
+/* =========================================================
+   📋 COPY / CUT EVENTS — يعترض Ctrl+C و Ctrl+X قبل المتصفح
+   ========================================================= */
+document.addEventListener('copy', (e) => {
+  // تجاهل لو إحنا جوة خلية في وضع التعديل (عايزين نص عادي)
+  if(editingCell) return;
+
+  // تجاهل لو مش في الجدول
+  const inGrid = (e.target && e.target.closest && e.target.closest('#gridBody')) ||
+                 (document.activeElement && document.activeElement.closest &&
+                  document.activeElement.closest('#gridBody'));
+  if(!inGrid) return;
+
+  // تجاهل لو مش فيه تحديد
+  if(!dragStart || !dragEnd) return;
+
+  // 🎯 امنع النسخ الافتراضي (نص الخلية)
+  e.preventDefault();
+  e.stopPropagation();
+
+  // 🎯 نفذ النسخ بتاعنا (بياخد الخلايا كوحدات)
+  copySelection(false);
+}, true); // ← capture phase عشان نسبق المتصفح
+
+document.addEventListener('cut', (e) => {
+  if(editingCell) return;
+
+  const inGrid = (e.target && e.target.closest && e.target.closest('#gridBody')) ||
+                 (document.activeElement && document.activeElement.closest &&
+                  document.activeElement.closest('#gridBody'));
+  if(!inGrid) return;
+
+  if(!dragStart || !dragEnd) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  copySelection(true);
+}, true);
+
 // -------- Keyboard shortcuts --------
 document.addEventListener('keydown', e => {
   // تجاهل لو في input عادي خارج الجدول
@@ -1491,48 +2353,104 @@ document.addEventListener('keydown', e => {
   const inGrid = e.target.matches && e.target.matches('#gridBody td[contenteditable]');
   const inFormInput = (tag === 'input' || tag === 'textarea' || tag === 'select') && !inGrid;
 
-  // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
-  if((e.ctrlKey || e.metaKey) && !inFormInput && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')){
-    if(e.key === 'y' || e.key === 'Y' || (e.key === 'z' && e.shiftKey)){
-      e.preventDefault(); doRedo(); return;
-    } else {
-      e.preventDefault(); doUndo(); return;
-    }
+// ↩️↪️ Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+// بيدعم e.code كذلك لوحة المفاتيح عربية أو أي لغة تانية
+const keyLower = (e.key || '').toLowerCase();
+const isZ = keyLower === 'z' || e.code === 'KeyZ';
+const isY = keyLower === 'y' || e.code === 'KeyY';
+
+if((e.ctrlKey || e.metaKey) && !e.altKey && !inFormInput && (isZ || isY)){
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  // 🧹 اسحب التركيز من الخلية عشان نمنع الـ native undo
+  const focused = document.activeElement;
+  if(focused && focused.matches && focused.matches('#gridBody td[contenteditable]')){
+    focused.blur();
   }
 
-  const hasSel = dragStart && dragEnd &&
-                 !(dragStart.r === dragEnd.r && dragStart.c === dragEnd.c);
-  const active = getActiveCell();
+  const wantRedo = isY || (isZ && e.shiftKey);
+  if(wantRedo){
+    doRedo();
+  } else {
+    doUndo();
+  }
+  return;
+}
 
-  // Ctrl+C
-  if((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')){
-    if(hasSel){ e.preventDefault(); copySelection(false); return; }
-  }
-  // Ctrl+X
-  if((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')){
-    if(hasSel){ e.preventDefault(); copySelection(true); return; }
-  }
-  // Ctrl+V — امنع لو إحنا في خلية ومفيش clipboard
-  if((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')){
-    if(clipboard && (active || hasSel)){
+  // ═══ Ctrl+D — Fill Down (املأ لتحت) ═══
+  if((e.ctrlKey || e.metaKey) && (keyLower === 'd' || e.code === 'KeyD') && !inFormInput){
+    const hasSel = dragStart && dragEnd;
+    if(hasSel){
       e.preventDefault();
-      const t = active ? { r: active.r, c: active.c } : { r: dragStart.r, c: dragStart.c };
-      pasteClipboard(t.r, t.c);
+      e.stopImmediatePropagation();
+      pushUndoSnapshot();
+      const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
+      for(let c = c1; c <= c2; c++){
+        const src = gridData[r1] ? (gridData[r1][c] || '') : '';
+        for(let r = r1 + 1; r <= r2; r++){
+          if(!gridData[r]) gridData[r] = newEmptyRow();
+          gridData[r][c] = src;
+        }
+      }
+      renderGrid();
+      highlightSelection();
+      toast(`⬇ تم تعبئة ${r2 - r1 + 1} صف`);
       return;
     }
   }
+
+  // ═══ Ctrl+R — Fill Right (املأ لليسار في RTL) ═══
+  if((e.ctrlKey || e.metaKey) && (keyLower === 'r' || e.code === 'KeyR') && !inFormInput){
+    const hasSel = dragStart && dragEnd;
+    if(hasSel){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      pushUndoSnapshot();
+      const {r1,c1,r2,c2} = normalizeRange(dragStart.r, dragStart.c, dragEnd.r, dragEnd.c);
+      for(let r = r1; r <= r2; r++){
+        const src = gridData[r] ? (gridData[r][c1] || '') : '';
+        for(let c = c1 + 1; c <= c2; c++){
+          if(!gridData[r]) gridData[r] = newEmptyRow();
+          gridData[r][c] = src;
+        }
+      }
+      renderGrid();
+      highlightSelection();
+      toast(`⬅ تم تعبئة ${c2 - c1 + 1} عمود`);
+      return;
+    }
+  }
+
+   // 🔑 التحديد يشمل الخلية الواحدة كذلك
+  const hasSel = !!dragStart && !!dragEnd;
+  const active = getActiveCell();
+
+  // Ctrl+C — يشتغل على خلية واحدة أو نطاق
+  if((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && !inFormInput){
+    if(hasSel){ e.preventDefault(); e.stopPropagation(); copySelection(false); return; }
+  }
+  // Ctrl+X
+  if((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X') && !inFormInput){
+    if(hasSel){ e.preventDefault(); e.stopPropagation(); copySelection(true); return; }
+  }
+    // Ctrl+V — سيبه للمتصفح عشان يطلق paste event
+  // (الـ paste handler هو اللي بيعالج كل حاجة، من النظام أو من الداخل)
   // Delete / Backspace
   if((e.key === 'Delete' || e.key === 'Backspace') && hasSel){
     e.preventDefault();
     deleteSelection();
     return;
   }
-  // Escape — امسح التحديد
+   // Escape — امسح التحديد وعلامات النسخ/القص
   if(e.key === 'Escape'){
     if(dragStart || dragEnd){
       clearSelectionHighlight();
       dragStart = null; dragEnd = null;
     }
+    clearCopyMarks();
+    clipboardMode = null;
+    clipboardSourceRange = null;
   }
 });
 
@@ -1553,35 +2471,168 @@ $('#gridBody').addEventListener('focusout', e => {
 // -------- Ctrl+V: لصق من الكليبورد الخارجي (Excel) --------
 // (موجود بالفعل في paste handler — لا نحتاج تكراره)
 
+/* =========================================================
+   🛡️ SMART VALIDATION (WARNINGS ONLY — NO REJECTION)
+   ========================================================= */
+function validateOrderData(o, existingOrders){
+  const w = [];
+  const add = (type, field, msg) => w.push({type, field, msg});
+
+  // 📞 رقم المحمول
+  if(!o.mobile){
+    add('missing', 'المحمول', 'رقم المحمول مفقود — مش هيقدر يتم التواصل مع العميل');
+  } else if(!/^01[0125]\d{8}$/.test(o.mobile)){
+    if(/^01\d+$/.test(o.mobile) && o.mobile.length < 11){
+      add('phone', 'المحمول', `رقم المحمول "${o.mobile}" ناقص — المتوقع 11 رقم (010/011/012/015 + 8 أرقام)`);
+    } else if(/^01\d+$/.test(o.mobile) && o.mobile.length > 11){
+      add('phone', 'المحمول', `رقم المحمول "${o.mobile}" أطول من المتوقع (${o.mobile.length} رقم)`);
+    } else {
+      add('phone', 'المحمول', `رقم المحمول "${o.mobile}" غير مصري أو غير صالح (المتوقع يبدأ بـ 010/011/012/015)`);
+    }
+  }
+
+  // 📞 التليفون الأرضي (اختياري — لو اتكتب بس)
+  if(o.landline && !/^0\d{7,9}$/.test(o.landline)){
+    add('phone', 'التليفون', `رقم التليفون "${o.landline}" غير صالح (المتوقع 8-10 أرقام تبدأ بـ 0)`);
+  }
+
+  // 📝 بيانات مهمة ناقصة
+  if(!o.customerName) add('missing', 'اسم العميل', 'اسم العميل مفقود');
+  if(!o.address)      add('missing', 'العنوان',    'العنوان مفقود');
+  if(!o.area)         add('missing', 'المنطقة',    'المنطقة مفقودة');
+  if(!o.governorate)  add('missing', 'المحافظة',   'المحافظة مفقودة');
+  if(!o.deliveryTime) add('missing', 'معاد التسليم','معاد التسليم مفقود');
+
+  // 📦 المنتجات
+  if(!o.items || !o.items.length){
+    add('missing', 'المنتجات', 'لا توجد منتجات في الطلب');
+  } else {
+    const zeroPrice = o.items.filter(i => !num(i.price));
+    if(zeroPrice.length){
+      add('data', 'السعر', `${zeroPrice.length} منتج بسعر صفر — راجع الأسعار`);
+    }
+    const emptyName = o.items.filter(i => !String(i.name||'').trim());
+    if(emptyName.length){
+      add('missing', 'اسم المنتج', `${emptyName.length} منتج بدون اسم`);
+    }
+  }
+
+  // 🔁 التحقق من الطلبات المكررة
+  if(o.mobile){
+    existingOrders.forEach(d => {
+      if(d.mobile === o.mobile){
+        const st = d.status === 'pending'   ? '📋 طلب حالي'
+                 : d.status === 'delivered' ? '✅ تم التسليم'
+                 : '🚫 ملغي';
+        const settledTag = d.settled ? ' • 💰 مُسوّى' : '';
+        add('duplicate', '🔁 طلب مكرر',
+          `الطلب مسجّل بنفس الرقم من قبل:\n` +
+          `• الكود: ${d.code}\n` +
+          `• الحالة: ${st}${settledTag}\n` +
+          `• الصفحة: ${d.pageName}\n` +
+          `• العميل: ${d.customerName}\n` +
+          `• التاريخ: ${fmtDate(d.date)}`
+        );
+      }
+    });
+  }
+
+  return w;
+}
+
+function showWarnings(warnings, context){
+  return new Promise(resolve => {
+    const groups = { duplicate:[], phone:[], missing:[], data:[] };
+    warnings.forEach(w => { (groups[w.type] = groups[w.type] || []).push(w); });
+
+    const meta = {
+      phone:     { icon:'📞', label:'رقم غير صالح',     bg:'#fee2e2', border:'#fca5a5', color:'#b91c1c' },
+      missing:   { icon:'📝', label:'بيانات ناقصة',      bg:'#fef3c7', border:'#fcd34d', color:'#92400e' },
+      duplicate: { icon:'🔁', label:'طلب مكرر',          bg:'#dbeafe', border:'#93c5fd', color:'#1e40af' },
+      data:      { icon:'💰', label:'بيانات غير مكتملة', bg:'#fef3c7', border:'#fcd34d', color:'#92400e' }
+    };
+
+    let html = `
+      <div class="hint" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fcd34d;color:#92400e;margin-bottom:14px;">
+        <b style="font-size:13.5px">⚠️ فيه ${warnings.length} تحذير قبل الحفظ</b><br>
+        ${context || 'الحفظ مش هيتمنع — ده تحذير بس. راجع البيانات وقرر.'}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+    `;
+
+    ['duplicate','phone','missing','data'].forEach(type => {
+      if(!groups[type] || !groups[type].length) return;
+      const m = meta[type];
+      groups[type].forEach(w => {
+        const msgHtml = esc(w.msg).replace(/\n/g, '<br>');
+        html += `
+          <div style="background:${m.bg};border:1.5px solid ${m.border};border-radius:10px;padding:10px 14px;">
+            <div style="font-size:11.5px;font-weight:800;color:${m.color};margin-bottom:4px">
+              ${m.icon} ${m.label}${w.row ? ` — صف ${w.row}` : ''}${w.field ? ` • ${w.field}` : ''}
+            </div>
+            <div style="font-size:12.5px;font-weight:700;color:#1e293b;line-height:1.7">${msgHtml}</div>
+          </div>
+        `;
+      });
+    });
+
+    html += '</div>';
+
+    $('#warningBody').innerHTML = html;
+    $('#warningModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = () => {
+      $('#warningModal').classList.remove('open');
+      document.body.style.overflow = '';
+    };
+
+    $('#continueSaveBtn').onclick = () => { cleanup(); resolve(true); };
+    document.querySelectorAll('[data-close-warning]').forEach(b => {
+      b.onclick = () => { cleanup(); resolve(false); };
+    });
+  });
+}
+
 
 /* =========================================================
    SAVE ALL FROM GRID
    ========================================================= */
 $('#saveAllBtn').addEventListener('click', saveAllFromGrid);
 
-function saveAllFromGrid(){
+async function saveAllFromGrid(){
   const defaultPageId = $('#defaultPage').value;
   const defaultPage = state.pages.find(p => p.id === defaultPageId);
   if(!defaultPage){
     alert('⚠️ اختر "الصفحة الافتراضية" من الأعلى أولاً');
     return;
   }
-  let saved = 0;
-  const errors = [];
+
+  const pendingOrders = [];
+  const allWarnings = [];
+  const pageCounters = {};
 
   gridData.forEach((row, idx) => {
     if(row.every(v => !String(v||'').trim())) return;
 
     const name   = (row[0]||'').trim();
     const mobile = normalizePhone((row[1]||'').trim());
-    if(!name){   errors.push(`صف ${idx+1}: اسم العميل مطلوب`); return; }
-    if(!mobile){ errors.push(`صف ${idx+1}: رقم المحمول مطلوب`); return; }
 
     const page = defaultPage;
+    const pageId = page.id;
 
-    const r = peekCode(page);
-    const code = r.code;
-    page.next = r.next;
+    // توليد كود فريد (يتخطى الأكواد المستخدمة والمنتظرة)
+    if(!pageCounters[pageId]) pageCounters[pageId] = page.next || 1;
+    let n = pageCounters[pageId];
+    let code;
+    while(true){
+      code = `${page.prefix}-${String(n).padStart(3,'0')}`;
+      const clash = state.orders.some(o=>o.code===code)
+                 || pendingOrders.some(p=>p.order.code===code);
+      if(!clash) break;
+      n++;
+    }
+    pageCounters[pageId] = n + 1;
 
     const d = (row[7]||'').trim().replace(/\D/g,'');
     const m = (row[8]||'').trim().replace(/\D/g,'');
@@ -1595,13 +2646,11 @@ function saveAllFromGrid(){
     }
 
     const items = buildItemsFromRow(row);
-    if(!items.length){ errors.push(`صف ${idx+1}: يجب إضافة منتج واحد على الأقل`); return; }
-
     const shipping = num(row[14]);
     const subtotal = items.reduce((s,i) => s + i.qty*i.price, 0);
     const total    = subtotal + shipping;
 
-    state.orders.unshift({
+    const order = {
       id: uid(), code, pageId: page.id, pageName: page.name,
       pagePhone: page.phone || '',
       customerName: name, mobile,
@@ -1621,22 +2670,46 @@ function saveAllFromGrid(){
       status: 'pending',
       createdAt: new Date().toISOString(),
       statusAt: null
-    });
-    saved++;
+    };
+
+    // 🛡️ التحقق — لازم نتضمن الطلبات الجديدة في الفحص كذلك
+    const existing = state.orders.concat(pendingOrders.map(p => p.order));
+    const w = validateOrderData(order, existing);
+    w.forEach(x => allWarnings.push({...x, row: idx+1}));
+
+    pendingOrders.push({ order, page });
   });
 
-  if(saved){
-    saveState();
-    renderAll();
-    gridData = Array.from({length:1}, newEmptyRow);
-    renderGrid();
-    toast(`✅ تم حفظ ${saved} طلب بنجاح`);
+  if(!pendingOrders.length){
+    toast('⚠️ لا توجد بيانات للحفظ');
+    return;
   }
-  if(errors.length){
-    if(errors.length <= 8) alert('⚠️ تنبيه:\n\n' + errors.join('\n'));
-    else alert('⚠️ تنبيه: ' + errors.length + ' صف بها مشاكل:\n\n' + errors.slice(0,8).join('\n') + '\n...');
+
+  // ⚠️ عرض التحذيرات إن وُجدت
+  if(allWarnings.length){
+    const ok = await showWarnings(
+      allWarnings,
+      `عدد الطلبات اللي هتتحفظ: <b>${pendingOrders.length}</b> — تقدر تكمّل عادي.`
+    );
+    if(!ok) { toast('↩️ تم إلغاء الحفظ'); return; }
   }
-  if(!saved && !errors.length) toast('⚠️ لا توجد بيانات للحفظ');
+
+  // 💾 الحفظ الفعلي
+  pendingOrders.forEach(({ order }) => {
+    state.orders.unshift(order);
+  });
+
+  // تحديث العدّادات
+  Object.entries(pageCounters).forEach(([pid, nextN]) => {
+    const p = state.pages.find(x => x.id === pid);
+    if(p) p.next = nextN;
+  });
+
+  saveState();
+  renderAll();
+  gridData = Array.from({length:1}, newEmptyRow);
+  renderGrid();
+  toast(`✅ تم حفظ ${pendingOrders.length} طلب${allWarnings.length ? ' (مع تحذيرات)' : ''}`);
 }
 
 /* =========================================================
@@ -1764,21 +2837,17 @@ function resetForm(){
   f_date.value = todayISO(); f_day.value = dayFromISO(f_date.value);
   itemsWrap.innerHTML=''; addItemRow(); syncPageFields(); recalc(); f_name.focus();
 }
-function saveOrder(){
+async function saveOrder(){
   const page = state.pages.find(p => p.id === f_page.value);
   if(!page){ toast('⚠️ اختر الصفحة'); f_page.focus(); return; }
-  if(!f_name.value.trim()){ toast('⚠️ اكتب اسم العميل'); f_name.focus(); return; }
-  const mobile = normalizePhone(f_mobile.value);
-  if(!mobile){ toast('⚠️ اكتب رقم المحمول'); f_mobile.focus(); return; }
-  if(!f_address.value.trim()){ toast('⚠️ اكتب العنوان'); f_address.focus(); return; }
-  const items = collectItems();
-  if(!items.length){ toast('⚠️ أضف منتجاً واحداً على الأقل'); return; }
 
-  const { code, next } = peekCode(page); page.next = next;
+  const { code, next } = peekCode(page);
   const t = recalc();
   const dateISO = f_date.value || todayISO();
+  const mobile = normalizePhone(f_mobile.value);
+  const items = collectItems();
 
-  state.orders.unshift({
+  const order = {
     id: uid(), code, pageId: page.id, pageName: page.name, pagePhone: page.phone||'',
     customerName: f_name.value.trim(), mobile,
     landline: normalizePhone(f_landline.value),
@@ -1795,15 +2864,21 @@ function saveOrder(){
     accountLocked: false, accountedAt: null,
     settled: false, settledAt: null, settledBatch: null,
     status:'pending', createdAt:new Date().toISOString(), statusAt:null
-  });
+  };
+
+  // 🛡️ التحقق
+  const warnings = validateOrderData(order, state.orders);
+  if(warnings.length){
+    const ok = await showWarnings(warnings, 'الحفظ مش هيتمنع — راجع وحدة قرر.');
+    if(!ok){ toast('↩️ تم إلغاء حفظ الطلب'); return; }
+  }
+
+  page.next = next;
+  state.orders.unshift(order);
   saveState(); renderAll();
   toast('✅ تم حفظ الطلب ' + code);
   resetForm();
 }
-
-$('#orderForm').addEventListener('submit', e => { e.preventDefault(); saveOrder(); });
-$('#saveAgainBtn').addEventListener('click', saveOrder);
-$('#resetBtn').addEventListener('click', resetForm);
 
 /* =========================================================
    TABLE RENDER
