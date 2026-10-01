@@ -26,141 +26,124 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
 .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:7px 13px;font-size:12.5px;display:flex;gap:8px;align-items:center}
 .chip b{font-size:16px;font-weight:800}
 /* ═══════════════════════════════════════════════════════════
-   🎨 TOP BAR PILLS — Modern Glass Design
+   🎨 TOP BAR PILLS — Unified Modern Glass Design
    ═══════════════════════════════════════════════════════════ */
 
-/* BASE PILL STYLE */
-.page-filter-top,
-.export-menu > .btn{
+/* ═══ الحاوية ═══ */
+.top-pill{
   position: relative;
-  background: rgba(255,255,255,.22);
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
-  border: 1px solid rgba(255,255,255,.35);
+  display: inline-block;
+}
+
+/* ═══ الزرار الموحّد ═══ */
+.top-pill-btn{
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,.28) 0%,
+    rgba(255,255,255,.14) 100%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.38);
   border-radius: 14px;
   padding: 9px 16px;
+  min-height: 40px;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 800;
   color: #fff;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   cursor: pointer;
   transition: all .25s cubic-bezier(.4,0,.2,1);
   box-shadow:
-    0 2px 8px -2px rgba(0,0,0,.15),
-    inset 0 1px 0 0 rgba(255,255,255,.25),
-    0 0 0 0 rgba(255,255,255,0);
+    0 2px 10px -2px rgba(0,0,0,.2),
+    inset 0 1px 0 0 rgba(255,255,255,.3);
   overflow: hidden;
   white-space: nowrap;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
-/* SHINE EFFECT */
-.page-filter-top::before,
-.export-menu > .btn::before{
+/* لمعان عند المرور */
+.top-pill-btn::before{
   content: "";
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 100%;
   background: linear-gradient(90deg,
     transparent,
-    rgba(255,255,255,.25),
+    rgba(255,255,255,.3),
     transparent);
   transition: left .6s ease;
   pointer-events: none;
 }
-.page-filter-top:hover::before,
-.export-menu > .btn:hover::before{
-  left: 100%;
-}
+.top-pill-btn:hover::before{ left: 100%; }
 
-/* HOVER STATE */
-.page-filter-top:hover,
-.export-menu > .btn:hover{
-  background: rgba(255,255,255,.32);
-  border-color: rgba(255,255,255,.55);
+/* Hover */
+.top-pill-btn:hover{
+  background: linear-gradient(135deg,
+    rgba(255,255,255,.4) 0%,
+    rgba(255,255,255,.24) 100%);
+  border-color: rgba(255,255,255,.6);
   transform: translateY(-1.5px);
   box-shadow:
-    0 8px 20px -6px rgba(0,0,0,.25),
-    inset 0 1px 0 0 rgba(255,255,255,.4),
+    0 10px 24px -6px rgba(0,0,0,.3),
+    inset 0 1px 0 0 rgba(255,255,255,.5),
     0 0 0 4px rgba(255,255,255,.08);
 }
 
-/* ACTIVE STATE */
-.page-filter-top:active,
-.export-menu > .btn:active{
-  transform: translateY(0);
+/* Active (مفتوح) */
+.top-pill.open .top-pill-btn{
+  background: linear-gradient(135deg,
+    rgba(255,255,255,.45) 0%,
+    rgba(255,255,255,.28) 100%);
+  border-color: rgba(255,255,255,.7);
   box-shadow:
-    0 2px 6px -2px rgba(0,0,0,.2),
-    inset 0 1px 0 0 rgba(255,255,255,.25);
+    0 12px 28px -8px rgba(0,0,0,.35),
+    inset 0 1px 0 0 rgba(255,255,255,.55),
+    0 0 0 4px rgba(255,255,255,.12);
 }
 
-/* ─── PAGE FILTER ─── */
-.page-filter-top{
-  padding: 0 14px 0 14px;
-  gap: 8px;
-}
-.page-filter-top > span:first-child{
-  font-size: 16px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));
-  opacity: .95;
-}
-.page-filter-top select{
-  background: transparent;
-  border: 0;
-  color: #fff;
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-  padding: 9px 22px 9px 4px;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-  background-repeat: no-repeat;
-  background-position: left 0 center;
-  min-width: 110px;
-}
-.page-filter-top select option{
-  color: #1e293b;
-  background: #fff;
-  font-weight: 700;
-  padding: 10px;
+.top-pill-btn:active{
+  transform: translateY(0) scale(.98);
 }
 
-/* ─── EXPORT BUTTON ─── */
-.export-menu{
-  position: relative;
-  display: inline-block;
+/* الأيقونة */
+.top-pill-btn .pill-ico{
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.15));
 }
-.export-menu > .btn{
-  padding: 9px 16px;
-  font-family: inherit;
-  font-size: 13px;
+
+/* النص */
+.top-pill-btn .pill-label{
   font-weight: 800;
   letter-spacing: .2px;
 }
-.export-menu > .btn::after{
-  content: "";
+
+/* السهم الموحّد */
+.top-pill-btn .pill-arrow{
   display: inline-block;
   width: 0;
   height: 0;
-  margin-inline-start: 4px;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid rgba(255,255,255,.85);
-  transition: transform .25s ease;
+  margin-inline-start: 2px;
+  border-left: 4.5px solid transparent;
+  border-right: 4.5px solid transparent;
+  border-top: 5.5px solid rgba(255,255,255,.9);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  flex-shrink: 0;
 }
-.export-menu.open > .btn::after,
-.export-menu > .btn.active::after{
+.top-pill.open .top-pill-btn .pill-arrow{
   transform: rotate(180deg);
 }
 
 /* ═══════════════════════════════════════════════════════════
-   🎨 EXPORT DROPDOWN — Modern Card Design
+   🎨 DROPDOWN PANEL — موحّد للزرارين
    ═══════════════════════════════════════════════════════════ */
-.export-dropdown{
+.top-pill-dropdown{
   position: absolute;
   top: calc(100% + 10px);
   inset-inline-start: 0;
@@ -168,24 +151,24 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   border: 1px solid rgba(226,232,240,.9);
   border-radius: 16px;
   box-shadow:
-    0 20px 45px -15px rgba(15,23,42,.3),
-    0 8px 20px -10px rgba(79,70,229,.25),
+    0 24px 55px -15px rgba(15,23,42,.35),
+    0 10px 24px -12px rgba(79,70,229,.3),
     0 0 0 1px rgba(255,255,255,.6) inset;
-  min-width: 270px;
+  min-width: 260px;
   padding: 8px;
   display: none;
-  z-index: 60;
+  z-index: 100;
   overflow: hidden;
   transform-origin: top right;
 }
-.export-dropdown.open{
+.top-pill-dropdown.open{
   display: block;
-  animation: dropdown-slide .22s cubic-bezier(.4,0,.2,1);
+  animation: pill-dropdown-slide .25s cubic-bezier(.4,0,.2,1);
 }
-@keyframes dropdown-slide{
+@keyframes pill-dropdown-slide{
   from{
     opacity: 0;
-    transform: translateY(-8px) scale(.96);
+    transform: translateY(-10px) scale(.94);
   }
   to{
     opacity: 1;
@@ -193,8 +176,8 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   }
 }
 
-/* DROPDOWN ITEMS */
-.export-dropdown button{
+/* عناصر القائمة */
+.top-pill-dropdown button{
   width: 100%;
   text-align: right;
   border: 0;
@@ -213,7 +196,7 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   position: relative;
   overflow: hidden;
 }
-.export-dropdown button::before{
+.top-pill-dropdown button::before{
   content: "";
   position: absolute;
   inset: 0;
@@ -221,15 +204,15 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   opacity: 0;
   transition: opacity .18s ease;
   z-index: -1;
+  border-radius: 10px;
 }
-.export-dropdown button:hover{
+.top-pill-dropdown button:hover{
   color: var(--primary);
   transform: translateX(-3px);
 }
-.export-dropdown button:hover::before{
-  opacity: 1;
-}
-.export-dropdown button .ico{
+.top-pill-dropdown button:hover::before{ opacity: 1; }
+
+.top-pill-dropdown button .ico{
   font-size: 17px;
   width: 24px;
   height: 24px;
@@ -241,14 +224,28 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   flex-shrink: 0;
   transition: all .18s ease;
 }
-.export-dropdown button:hover .ico{
+.top-pill-dropdown button:hover .ico{
   background: linear-gradient(135deg, var(--primary), #9333ea);
   transform: scale(1.08) rotate(-3deg);
   box-shadow: 0 4px 10px -3px var(--primary);
 }
 
-/* DROPDOWN SEPARATOR */
-.export-dropdown .sep{
+/* زر مختار (فلتر الصفحات) */
+.top-pill-dropdown button.selected{
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: var(--primary);
+  font-weight: 900;
+}
+.top-pill-dropdown button.selected::after{
+  content: "✓";
+  margin-inline-start: auto;
+  color: var(--primary);
+  font-weight: 900;
+  font-size: 15px;
+}
+
+/* فاصل */
+.top-pill-dropdown .sep{
   height: 1px;
   background: linear-gradient(90deg,
     transparent,
@@ -258,8 +255,8 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
   margin: 6px 8px;
 }
 
-/* DROPDOWN HEADER */
-.export-dropdown .hdr{
+/* عنوان */
+.top-pill-dropdown .hdr{
   font-size: 10.5px;
   color: var(--muted);
   font-weight: 900;
@@ -273,19 +270,16 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
    📱 RESPONSIVE
    ═══════════════════════════════════════════════════════════ */
 @media (max-width: 640px){
-  .page-filter-top,
-  .export-menu > .btn{
+  .top-pill-btn{
     padding: 8px 12px;
     font-size: 12px;
     border-radius: 12px;
+    min-height: 36px;
+    gap: 7px;
   }
-  .page-filter-top select{
-    font-size: 12px;
-    min-width: 90px;
-  }
-  .export-dropdown{
-    min-width: 240px;
-  }
+  .top-pill-btn .pill-ico{ font-size: 13px; }
+  .top-pill-dropdown{ min-width: 220px; }
+  .top-pill-dropdown button{ font-size: 12.5px; padding: 10px 12px; }
 }
 
 /* TABS */
@@ -803,16 +797,29 @@ input[type="number"], td.cell-multi {
         <p>إدخال Excel مباشر • تسليمات • ملغيين • فواتير • تسويات</p>
       </div>
     </div>
-    <div class="top-stats">
-      <div class="page-filter-top">
-        <span>📄</span>
-        <select id="pageFilter"><option value="">كل الصفحات</option></select>
+        <div class="top-stats">
+
+      <!-- PAGE FILTER — Custom Dropdown -->
+      <div class="top-pill" id="pageFilterMenu">
+        <button class="top-pill-btn" id="pageFilterBtn">
+          <span class="pill-ico">📄</span>
+          <span class="pill-label" id="pageFilterLabel">كل الصفحات</span>
+          <span class="pill-arrow"></span>
+        </button>
+        <div class="top-pill-dropdown" id="pageFilterDropdown">
+          <div class="hdr">فلتر الصفحات</div>
+          <div id="pageFilterList"></div>
+        </div>
       </div>
 
       <!-- EXPORT DROPDOWN -->
-      <div class="export-menu">
-        <button class="btn sm" id="exportDropdownBtn">📤 تصدير Excel ▾</button>
-        <div class="export-dropdown" id="exportDropdown">
+      <div class="top-pill" id="exportMenu">
+        <button class="top-pill-btn" id="exportDropdownBtn">
+          <span class="pill-ico">📤</span>
+          <span class="pill-label">تصدير Excel</span>
+          <span class="pill-arrow"></span>
+        </button>
+        <div class="top-pill-dropdown" id="exportDropdown">
           <div class="hdr">تصدير الطلبات</div>
           <button data-export-excel="pending"><span class="ico">📋</span> الطلبات الحالية</button>
           <button data-export-excel="delivered"><span class="ico">✅</span> التسليمات</button>
@@ -1458,12 +1465,12 @@ function currentProfitOfPage(pageId){
 let deferredPrompt = null;
 
 // ─── تسجيل Service Worker ───
-if('serviceWorker' in navigator){
+// ⏸️ معطّل مؤقتاً لحد ما نرفع sw.js صح
+if(false && 'serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
       .then(reg => {
         console.log('✅ Service Worker registered:', reg.scope);
-        // لو فيه نسخة جديدة، فعّلها فوراً
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
@@ -3168,30 +3175,58 @@ function renderPageSelect(){
   renderPageFilter();
   syncPageFields();
 }
+// 🎯 فلتر الصفحات — Custom Dropdown
+window._currentPageFilter = '';
+
 function renderPageFilter(){
-  const sel = $('#pageFilter');
-  const cur = sel.value;
+  const listEl  = document.getElementById('pageFilterList');
+  const labelEl = document.getElementById('pageFilterLabel');
+  if(!listEl || !labelEl) return;
+
+  const cur = window._currentPageFilter || '';
 
   // 👤 Page user: بس صفحته
   if(window.currentRole === 'page' && window.currentPageId){
     const myPage = state.pages.find(p => p.id === window.currentPageId);
     if(myPage){
-      sel.innerHTML = `<option value="${myPage.id}">${esc(myPage.name)}</option>`;
-      sel.value = myPage.id;
+      labelEl.textContent = myPage.name;
+      listEl.innerHTML = `<button class="selected" data-filter-value="${myPage.id}">${esc(myPage.name)}</button>`;
+      window._currentPageFilter = myPage.id;
     } else {
-      sel.innerHTML = '<option value="">— صفحتك غير موجودة —</option>';
+      labelEl.textContent = '— صفحتك غير موجودة —';
+      listEl.innerHTML = '';
     }
-    sel.disabled = true;
     return;
   }
 
   // 👑 Admin: كل الصفحات
-  sel.disabled = false;
-  sel.innerHTML = '<option value="">📄 كل الصفحات</option>' +
-    state.pages.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  if(state.pages.some(p => p.id === cur)) sel.value = cur;
+  let html = `<button data-filter-value="" class="${cur === '' ? 'selected' : ''}">كل الصفحات</button>`;
+  state.pages.forEach(p => {
+    const isSel = p.id === cur;
+    html += `<button data-filter-value="${p.id}" class="${isSel ? 'selected' : ''}">${esc(p.name)}</button>`;
+  });
+  listEl.innerHTML = html;
+
+  // النص الظاهر
+  if(cur === ''){
+    labelEl.textContent = 'كل الصفحات';
+  } else {
+    const p = state.pages.find(x => x.id === cur);
+    labelEl.textContent = p ? p.name : 'كل الصفحات';
+  }
 }
-$('#pageFilter').addEventListener('change', () => { selected.clear(); renderAll(); });
+
+// 🎯 اختيار صفحة من القائمة
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter-value]');
+  if(!btn) return;
+  window._currentPageFilter = btn.dataset.filterValue;
+  // اقفل القوائم
+  document.querySelectorAll('.top-pill').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.top-pill-dropdown').forEach(d => d.classList.remove('open'));
+  selected.clear();
+  renderAll();
+});
 
 function syncPageFields(){
   const page = state.pages.find(p => p.id === f_page.value);
@@ -3355,7 +3390,7 @@ function renderTable(status){
   const cfg = LIST_VIEWS[status];
   const tbody = $(cfg.tbody), empty = $(cfg.empty);
   const q = ($(cfg.search)?.value || '').trim();
-  const pf = $('#pageFilter').value;
+  const pf = window._currentPageFilter || '';
   let list = state.orders.filter(o => o.status === status);
   if(pf) list = list.filter(o => o.pageId === pf);
   list = list.filter(o => matches(o, q));
@@ -3444,7 +3479,7 @@ Object.values(LIST_VIEWS).forEach(cfg => {
    SELECTION
    ========================================================= */
 function selectedInView(status){
-  const pf = $('#pageFilter').value;
+  const pf = window._currentPageFilter || '';
   let list = state.orders.filter(o => o.status === status && selected.has(o.id));
   if(pf) list = list.filter(o => o.pageId === pf);
   return list;
@@ -3472,9 +3507,9 @@ document.addEventListener('change', e => {
     lastClickedId = id;
     updateBulkBar(e.target.dataset.status);
   }
-  if(e.target.matches('.select-all')){
+    if(e.target.matches('.select-all')){
     const status = e.target.dataset.status;
-    const pf = $('#pageFilter').value;
+    const pf = window._currentPageFilter || '';
     let list = state.orders.filter(o => o.status === status);
     if(pf) list = list.filter(o => o.pageId === pf);
     const cfg = LIST_VIEWS[status];
@@ -3530,8 +3565,8 @@ document.addEventListener('keydown', e => {
     const map = { 'view-orders': 'pending', 'view-delivered': 'delivered', 'view-cancelled': 'cancelled' };
     const status = map[activeView.id];
     if(!status) return;
-    e.preventDefault();
-    const pf = $('#pageFilter').value;
+        e.preventDefault();
+    const pf = window._currentPageFilter || '';
     let list = state.orders.filter(o => o.status === status);
     if(pf) list = list.filter(o => o.pageId === pf);
     const cfg = LIST_VIEWS[status];
@@ -4891,34 +4926,60 @@ $('#npPrefix').addEventListener('input', e => { e.target.dataset.touched='1'; })
 $('#npPhone').addEventListener('blur', e => { e.target.value = normalizePhone(e.target.value); });
 
 /* =========================================================
-   EXCEL EXPORT DROPDOWN
+   🎯 TOP PILLS — إدارة القوائم المنسدلة الموحّدة
    ========================================================= */
-const exportBtn = $('#exportDropdownBtn');
-const exportDd = $('#exportDropdown');
 
-exportBtn.addEventListener('click', e => {
+function togglePill(pillId){
+  const pill = document.getElementById(pillId);
+  if(!pill) return;
+  const wasOpen = pill.classList.contains('open');
+
+  // اقفل كل القوائم
+  document.querySelectorAll('.top-pill').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.top-pill-dropdown').forEach(d => d.classList.remove('open'));
+
+  // افتح اللي محتاجه (لو مش كان مفتوح)
+  if(!wasOpen){
+    pill.classList.add('open');
+    const dd = pill.querySelector('.top-pill-dropdown');
+    if(dd) dd.classList.add('open');
+  }
+}
+
+// أزرار الفتح
+document.getElementById('pageFilterBtn')?.addEventListener('click', e => {
   e.stopPropagation();
-  exportDd.classList.toggle('open');
-  // 🎯 اربط حالة الزرار بالقائمة
-  exportBtn.classList.toggle('active', exportDd.classList.contains('open'));
+  togglePill('pageFilterMenu');
 });
 
+document.getElementById('exportDropdownBtn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  togglePill('exportMenu');
+});
+
+// اقفل عند الضغط بره
 document.addEventListener('click', e => {
-  if(!e.target.closest('.export-menu')){
-    exportDd.classList.remove('open');
-    exportBtn.classList.remove('active');
+  if(!e.target.closest('.top-pill')){
+    document.querySelectorAll('.top-pill').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.top-pill-dropdown').forEach(d => d.classList.remove('open'));
   }
 });
-document.addEventListener('click', e => {
-  if(!e.target.closest('.export-menu')) exportDd.classList.remove('open');
+
+// اقفل بـ Escape
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.top-pill').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.top-pill-dropdown').forEach(d => d.classList.remove('open'));
+  }
 });
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('[data-export-excel]'); if(!btn) return;
-  exportDd.classList.remove('open');
-  exportBtn.classList.remove('active');
+  // اقفل القوائم
+  document.querySelectorAll('.top-pill').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.top-pill-dropdown').forEach(d => d.classList.remove('open'));
   const type = btn.dataset.exportExcel;
-  const pf = $('#pageFilter').value;
+  const pf = window._currentPageFilter;
 
   if(type === 'pending' || type === 'delivered' || type === 'cancelled'){
     let list = state.orders.filter(o => o.status === type);
@@ -5077,11 +5138,11 @@ function renderAll(){
   renderMyProfit();
 
   // 🎯 تحديد الفلتر: أدمن (حسب اختيار pageFilter) أو صفحة (صفحته فقط)
-  let filterPageId = null;
+    let filterPageId = null;
   if(window.currentRole === 'page' && window.currentPageId){
     filterPageId = window.currentPageId;
   } else {
-    filterPageId = $('#pageFilter').value || null;
+    filterPageId = window._currentPageFilter || null;
   }
 
   const filtered = filterPageId
