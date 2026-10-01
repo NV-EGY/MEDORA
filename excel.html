@@ -25,21 +25,268 @@ body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color
 .top-stats{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:7px 13px;font-size:12.5px;display:flex;gap:8px;align-items:center}
 .chip b{font-size:16px;font-weight:800}
-.page-filter-top{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:6px 12px;font-size:12.5px;display:flex;align-items:center;gap:8px}
-.page-filter-top select{background:transparent;border:0;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;outline:none;padding:2px 4px}
-.page-filter-top select option{color:#1e293b;background:#fff}
+/* ═══════════════════════════════════════════════════════════
+   🎨 TOP BAR PILLS — Modern Glass Design
+   ═══════════════════════════════════════════════════════════ */
 
-/* EXPORT DROPDOWN */
-.export-menu{position:relative;display:inline-block}
-.export-menu > .btn{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3)}
-.export-menu > .btn:hover{background:rgba(255,255,255,.28)}
-.export-dropdown{position:absolute;top:calc(100% + 6px);inset-inline-start:0;background:#fff;border:1.5px solid var(--border);border-radius:12px;box-shadow:0 12px 34px -10px rgba(15,23,42,.35);min-width:240px;padding:6px;display:none;z-index:60;overflow:hidden}
-.export-dropdown.open{display:block;animation:fade .15s ease}
-.export-dropdown button{width:100%;text-align:right;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:.15s}
-.export-dropdown button:hover{background:#eef2ff;color:var(--primary)}
-.export-dropdown button .ico{font-size:15px;width:18px;text-align:center}
-.export-dropdown .sep{height:1px;background:var(--border);margin:4px 6px}
-.export-dropdown .hdr{font-size:10.5px;color:var(--muted);font-weight:800;padding:6px 12px 3px;letter-spacing:.4px}
+/* BASE PILL STYLE */
+.page-filter-top,
+.export-menu > .btn{
+  position: relative;
+  background: rgba(255,255,255,.22);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 14px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  box-shadow:
+    0 2px 8px -2px rgba(0,0,0,.15),
+    inset 0 1px 0 0 rgba(255,255,255,.25),
+    0 0 0 0 rgba(255,255,255,0);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* SHINE EFFECT */
+.page-filter-top::before,
+.export-menu > .btn::before{
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,255,255,.25),
+    transparent);
+  transition: left .6s ease;
+  pointer-events: none;
+}
+.page-filter-top:hover::before,
+.export-menu > .btn:hover::before{
+  left: 100%;
+}
+
+/* HOVER STATE */
+.page-filter-top:hover,
+.export-menu > .btn:hover{
+  background: rgba(255,255,255,.32);
+  border-color: rgba(255,255,255,.55);
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 8px 20px -6px rgba(0,0,0,.25),
+    inset 0 1px 0 0 rgba(255,255,255,.4),
+    0 0 0 4px rgba(255,255,255,.08);
+}
+
+/* ACTIVE STATE */
+.page-filter-top:active,
+.export-menu > .btn:active{
+  transform: translateY(0);
+  box-shadow:
+    0 2px 6px -2px rgba(0,0,0,.2),
+    inset 0 1px 0 0 rgba(255,255,255,.25);
+}
+
+/* ─── PAGE FILTER ─── */
+.page-filter-top{
+  padding: 0 14px 0 14px;
+  gap: 8px;
+}
+.page-filter-top > span:first-child{
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));
+  opacity: .95;
+}
+.page-filter-top select{
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  padding: 9px 22px 9px 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: left 0 center;
+  min-width: 110px;
+}
+.page-filter-top select option{
+  color: #1e293b;
+  background: #fff;
+  font-weight: 700;
+  padding: 10px;
+}
+
+/* ─── EXPORT BUTTON ─── */
+.export-menu{
+  position: relative;
+  display: inline-block;
+}
+.export-menu > .btn{
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+.export-menu > .btn::after{
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-inline-start: 4px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid rgba(255,255,255,.85);
+  transition: transform .25s ease;
+}
+.export-menu.open > .btn::after,
+.export-menu > .btn.active::after{
+  transform: rotate(180deg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🎨 EXPORT DROPDOWN — Modern Card Design
+   ═══════════════════════════════════════════════════════════ */
+.export-dropdown{
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline-start: 0;
+  background: #fff;
+  border: 1px solid rgba(226,232,240,.9);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 45px -15px rgba(15,23,42,.3),
+    0 8px 20px -10px rgba(79,70,229,.25),
+    0 0 0 1px rgba(255,255,255,.6) inset;
+  min-width: 270px;
+  padding: 8px;
+  display: none;
+  z-index: 60;
+  overflow: hidden;
+  transform-origin: top right;
+}
+.export-dropdown.open{
+  display: block;
+  animation: dropdown-slide .22s cubic-bezier(.4,0,.2,1);
+}
+@keyframes dropdown-slide{
+  from{
+    opacity: 0;
+    transform: translateY(-8px) scale(.96);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* DROPDOWN ITEMS */
+.export-dropdown button{
+  width: 100%;
+  text-align: right;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 11px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  transition: all .18s ease;
+  position: relative;
+  overflow: hidden;
+}
+.export-dropdown button::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  opacity: 0;
+  transition: opacity .18s ease;
+  z-index: -1;
+}
+.export-dropdown button:hover{
+  color: var(--primary);
+  transform: translateX(-3px);
+}
+.export-dropdown button:hover::before{
+  opacity: 1;
+}
+.export-dropdown button .ico{
+  font-size: 17px;
+  width: 24px;
+  height: 24px;
+  text-align: center;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: all .18s ease;
+}
+.export-dropdown button:hover .ico{
+  background: linear-gradient(135deg, var(--primary), #9333ea);
+  transform: scale(1.08) rotate(-3deg);
+  box-shadow: 0 4px 10px -3px var(--primary);
+}
+
+/* DROPDOWN SEPARATOR */
+.export-dropdown .sep{
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--border) 20%,
+    var(--border) 80%,
+    transparent);
+  margin: 6px 8px;
+}
+
+/* DROPDOWN HEADER */
+.export-dropdown .hdr{
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 900;
+  padding: 8px 14px 5px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  opacity: .75;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   📱 RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 640px){
+  .page-filter-top,
+  .export-menu > .btn{
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 12px;
+  }
+  .page-filter-top select{
+    font-size: 12px;
+    min-width: 90px;
+  }
+  .export-dropdown{
+    min-width: 240px;
+  }
+}
 
 /* TABS */
 .tabs-wrap{position:sticky;top:0;z-index:40;background:var(--bg);padding:12px 0 6px}
@@ -4652,6 +4899,15 @@ const exportDd = $('#exportDropdown');
 exportBtn.addEventListener('click', e => {
   e.stopPropagation();
   exportDd.classList.toggle('open');
+  // 🎯 اربط حالة الزرار بالقائمة
+  exportBtn.classList.toggle('active', exportDd.classList.contains('open'));
+});
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('.export-menu')){
+    exportDd.classList.remove('open');
+    exportBtn.classList.remove('active');
+  }
 });
 document.addEventListener('click', e => {
   if(!e.target.closest('.export-menu')) exportDd.classList.remove('open');
@@ -4660,6 +4916,7 @@ document.addEventListener('click', e => {
 document.addEventListener('click', e => {
   const btn = e.target.closest('[data-export-excel]'); if(!btn) return;
   exportDd.classList.remove('open');
+  exportBtn.classList.remove('active');
   const type = btn.dataset.exportExcel;
   const pf = $('#pageFilter').value;
 
