@@ -1,0 +1,28 @@
+{
+  "name": "نظام إدارة الطلبات",
+  "short_name": "الطلبات",
+  "description": "نظام إدارة الطلبات - إدخال Excel مباشر • تسليمات • ملغيين • فواتير • تسويات",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./excel.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2f7",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
