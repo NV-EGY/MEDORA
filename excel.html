@@ -15,6 +15,17 @@
 body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
 .wrap{max-width:1500px;margin:0 auto;padding:0 14px}
 
+  <!-- ═══ PWA ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الطلبات">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
 /* TOPBAR */
 .topbar{background:linear-gradient(120deg,#4f46e5,#7c3aed 55%,#9333ea);color:#fff;padding:16px 0 20px;box-shadow:0 10px 30px -18px rgba(79,70,229,.9)}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -565,6 +576,10 @@ input[type="number"], td.cell-multi {
           <button data-export-excel="history"><span class="ico">📜</span> سجل التسويات</button>
         </div>
       </div>
+
+      <button class="btn sm" id="installAppBtn" style="display:none;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.3);">
+  📲 تثبيت التطبيق
+</button>
 
       <div class="chip">الطلبات <b id="stPending">0</b></div>
       <div class="chip">تم التسليم <b id="stDelivered">0</b></div>
@@ -1187,6 +1202,68 @@ function settledTotalOfPage(pageId){
 }
 function currentProfitOfPage(pageId){
   return unsettledOrdersOfPage(pageId).reduce((s,o) => s + num(o.manual), 0);
+}
+
+  /* =========================================================
+   📲 PWA — تسجيل Service Worker + زر التثبيت
+   ========================================================= */
+let deferredPrompt = null;
+
+// ─── تسجيل Service Worker ───
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        console.log('✅ Service Worker registered:', reg.scope);
+        // لو فيه نسخة جديدة، فعّلها فوراً
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+              showSyncIndicator('🔄 تم تحديث التطبيق', 2000);
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('❌ SW registration failed:', err));
+  });
+}
+
+// ─── زر التثبيت ───
+const installBtn = document.getElementById('installAppBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if(installBtn) installBtn.style.display = 'inline-flex';
+});
+
+if(installBtn){
+  installBtn.addEventListener('click', async () => {
+    if(!deferredPrompt){
+      // آيفون أو التطبيق مثبّت بالفعل
+      toast('📲 لو على iPhone: اضغط Share ← Add to Home Screen');
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Install outcome:', outcome);
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+  });
+}
+
+// ─── إخفاء الزر لو التطبيق مثبّت بالفعل ───
+window.addEventListener('appinstalled', () => {
+  console.log('✅ App installed');
+  if(installBtn) installBtn.style.display = 'none';
+  toast('🎉 تم تثبيت التطبيق بنجاح');
+});
+
+// ─── كشف standalone mode (التطبيق مفتوح كتطبيق مثبّت) ───
+if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true){
+  console.log('📲 Running as installed app');
+  document.body.classList.add('pwa-mode');
 }
 
 /* =========================================================
