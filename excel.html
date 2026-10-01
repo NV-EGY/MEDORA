@@ -15,17 +15,6 @@
 body{font-family:'Cairo','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
 .wrap{max-width:1500px;margin:0 auto;padding:0 14px}
 
-  <!-- ═══ PWA ═══ -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4f46e5">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="الطلبات">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-
 /* TOPBAR */
 .topbar{background:linear-gradient(120deg,#4f46e5,#7c3aed 55%,#9333ea);color:#fff;padding:16px 0 20px;box-shadow:0 10px 30px -18px rgba(79,70,229,.9)}
 .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -539,10 +528,22 @@ input[type="number"], td.cell-multi {
     window.dispatchEvent(new Event('fb-ready'));
   } catch(err) {
     console.error('❌ Firebase init failed:', err);
-    window.fbReady = false;
+       window.fbReady = false;
     window.dispatchEvent(new Event('fb-error'));
   }
 </script>
+
+<!-- ═══ PWA ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الطلبات">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
 </head>
 <body>
 
