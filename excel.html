@@ -527,7 +527,59 @@ table.tbl tbody tr[data-oid] input{cursor:auto}
 
 /* CHECKBOX */
 th.col-check,td.col-check{width:38px;min-width:38px;text-align:center;background:#f8fafc!important;position:sticky;right:0;z-index:2;border-left:1px solid var(--border)}
-.row-check,.select-all{width:16px;height:16px;cursor:pointer;accent-color:var(--primary);vertical-align:middle}
+/* ═══ CHECKBOXES — Interactive ═══ */
+.row-check,
+.select-all{
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  vertical-align: middle;
+  transition: transform .15s ease, box-shadow .15s ease;
+  border-radius: 5px;
+}
+
+/* Hover */
+.row-check:hover,
+.select-all:hover{
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(79,70,229,.15);
+}
+
+/* ضغطة */
+.row-check:active,
+.select-all:active{
+  transform: scale(.92);
+}
+
+/* select-all أكبر شوية */
+.select-all{
+  width: 20px;
+  height: 20px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* لما يكون indeterminate (جزئي) */
+.select-all:indeterminate{
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.2);
+}
+
+/* لما يبقى checked → نبضة */
+@keyframes checkPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(79,70,229,.6); }
+  100% { box-shadow: 0 0 0 10px rgba(79,70,229,0); }
+}
+.select-all:checked,
+.row-check:checked{
+  animation: checkPulse .45s ease-out;
+}
+
+/* رأس الجدول اللي فيه الـ select-all */
+th.col-check{
+  padding: 8px 4px !important;
+}
 .settled-mark{background:#ecfdf5!important;color:#15803d;font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;display:inline-block;margin-inline-start:4px}
 .settled-cell{text-align:center;font-weight:800;color:#15803d;font-size:11.5px;padding:6px 8px;background:#ecfdf5;border-radius:7px;display:inline-block;width:100%}
 
@@ -548,6 +600,126 @@ th.col-check,td.col-check{width:38px;min-width:38px;text-align:center;background
 .bulk-bar .cnt{font-weight:800;color:var(--primary);font-size:13px;padding:4px 10px;background:#fff;border-radius:8px;border:1px solid #c7d2fe}
 .bulk-bar .sum{font-weight:800;color:#15803d;font-size:13px;padding:4px 10px;background:#fff;border-radius:8px;border:1px solid #bbf7d0}
 .bulk-bar .hint-mini{font-size:11.5px;color:var(--muted);font-weight:700}
+
+/* ═══════════════════════════════════════════════════════════
+   🗺️ STAGE BADGES — مراحل الشحن
+   ═══════════════════════════════════════════════════════════ */
+.stage-badge{
+  display:inline-block;
+  font-size:10px;
+  font-weight:800;
+  padding:2px 9px;
+  border-radius:20px;
+  white-space:nowrap;
+  letter-spacing:.2px;
+}
+.stage-bahari{ background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+.stage-qibli { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+.stage-dakhli{ background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+.stage-drivers{ background:#f3e8ff; color:#6b21a8; border:1px solid #c4b5fd; }
+
+/* ═══ فلتر المرحلة ═══ */
+.stage-filter{
+  font-family:inherit;
+  font-size:12.5px;
+  font-weight:700;
+  border:1.5px solid var(--border);
+  border-radius:9px;
+  padding:8px 12px;
+  background:#fff;
+  color:var(--text);
+  cursor:pointer;
+  min-width:160px;
+}
+.stage-filter:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(79,70,229,.12);
+  outline:none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   📊 جدول مضغوط — عرض كل شيء بدون تمرير أفقي
+   ═══════════════════════════════════════════════════════════ */
+table.tbl.compact{
+  font-size: 12px;
+  min-width: 720px;
+}
+table.tbl.compact thead th{
+  padding: 7px 5px;
+  font-size: 10.5px;
+}
+table.tbl.compact tbody td{
+  padding: 2px 5px;
+  vertical-align: middle;
+  height: 1px;              /* trick: يجبر الخلية على أصغر ارتفاع ممكن */
+  line-height: 1;
+}
+table.tbl.compact tbody tr{
+  height: 1px;
+}
+table.tbl.compact thead th{
+  padding: 6px 5px;
+  vertical-align: middle;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.td-stack{
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  white-space: nowrap;
+  height: 100%;
+  min-height: 0;
+}
+.td-stack .main{
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--text);
+}
+.td-stack .sub{
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.td-stack .sub-ltr{
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.td-stack .addr-line{
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+}
+.td-actions{
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  max-width: 132px;
+}
+.td-actions .mini{
+  padding: 4px 7px;
+  font-size: 10.5px;
+}
+
+/* ═══ صف داخلي مناديب — تمييز بنفسجي ═══ */
+table.tbl tbody tr.row-driver{
+  background:linear-gradient(90deg,#faf5ff 0%,#f3e8ff 100%)!important;
+  box-shadow:inset 3px 0 0 0 #8b5cf6;
+}
+table.tbl tbody tr.row-driver:hover{
+  background:linear-gradient(90deg,#f3e8ff 0%,#e9d5ff 100%)!important;
+}
 
 /* ACCOUNT CELL */
 .acc-wrap{display:flex;gap:4px;align-items:center;justify-content:center}
@@ -694,18 +866,18 @@ input[type="number"], td.cell-multi {
   direction: ltr;
   unicode-bidi: isolate;
 }
-/* ═══ الطلبات المطبوعة — أخضر خفيف هادي ═══ */
+/* ═══ الطلبات المطبوعة — أحمر واضح ═══ */
 table.tbl tbody tr.row-printed{
-  background: linear-gradient(90deg, #f0fdf4 0%, #dcfce7 100%) !important;
-  box-shadow: inset 3px 0 0 0 #16a34a;
+  background: linear-gradient(90deg, #fee2e2 0%, #fecaca 100%) !important;
+  box-shadow: inset 3px 0 0 0 #dc2626;
 }
 table.tbl tbody tr.row-printed:hover{
-  background: linear-gradient(90deg, #dcfce7 0%, #bbf7d0 100%) !important;
+  background: linear-gradient(90deg, #fecaca 0%, #fca5a5 100%) !important;
 }
 .print-badge{
-  display:inline-block;background:#dcfce7;color:#15803d;
+  display:inline-block;background:#fee2e2;color:#b91c1c;
   font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:5px;
-  margin-inline-start:4px;border:1px solid #86efac;white-space:nowrap;
+  margin-inline-start:4px;border:1px solid #fca5a5;white-space:nowrap;
 }
 .edit-badge{
   display:inline-block;background:#fee2e2;color:#15803d;
@@ -1166,6 +1338,85 @@ table.inv-prod td.num{
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   🎯 ضغط ارتفاع صف الطلب — سطر واحد فقط
+   ═══════════════════════════════════════════════════════════ */
+table.tbl.compact .code,
+table.tbl.compact .pill,
+table.tbl.compact .stage-badge,
+table.tbl.compact .print-badge,
+table.tbl.compact .edit-badge,
+table.tbl.compact .settled-mark{
+  padding: 0 !important;
+  line-height: 1.1 !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  font-size: 10px !important;
+}
+
+table.tbl.compact .code{
+  padding: 0 5px !important;
+  font-size: 11px !important;
+}
+table.tbl.compact .pill,
+table.tbl.compact .stage-badge{
+  padding: 0 6px !important;
+}
+
+/* إزالة أي box-shadow أو margin من البادجات يزود الارتفاع */
+table.tbl.compact .print-badge,
+table.tbl.compact .edit-badge,
+table.tbl.compact .settled-mark{
+  margin-inline-start: 2px !important;
+}
+
+/* الـ main والـ sub على نفس الخط وماياخدوش خط إضافي */
+table.tbl.compact .main,
+table.tbl.compact .sub,
+table.tbl.compact .sub-ltr{
+  line-height: 1 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* ملغي الـ vertical-align:top لو لسه موجود */
+table.tbl.compact tbody td{
+  vertical-align: middle !important;
+}
+
+/* العنوان الطويل يقطع بنقطة بدل ما يلتف */
+.td-stack .addr-line{
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 2;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🎯 الصف المحدد — خلفية زرقا واضحة تتغلّب على أي حالة
+   ═══════════════════════════════════════════════════════════ */
+
+/* 1) المحدد عادي / مطبوع / مناديب / الاتنين مع بعض → كلهم نفس الخلفية الزرقا */
+table.tbl tbody tr.selected,
+table.tbl tbody tr.selected.row-printed,
+table.tbl tbody tr.selected.row-driver,
+table.tbl tbody tr.selected.row-printed.row-driver{
+  background: linear-gradient(90deg, #bfdbfe 0%, #93c5fd 100%) !important;
+  position: relative;
+  z-index: 2;
+}
+
+/* 2) عند الـ hover → أغمق شوية */
+table.tbl tbody tr.selected:hover,
+table.tbl tbody tr.selected.row-printed:hover,
+table.tbl tbody tr.selected.row-driver:hover,
+table.tbl tbody tr.selected.row-printed.row-driver:hover{
+  background: linear-gradient(90deg, #93c5fd 0%, #60a5fa 100%) !important;
+}
+
 </style>
 
 <!-- ============================================================
@@ -1173,8 +1424,15 @@ table.inv-prod td.num{
      ============================================================ -->
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updateEmail,
+  updatePassword
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, onSnapshot } 
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -1216,6 +1474,8 @@ table.inv-prod td.num{
     window.fbCreateUser = createUserWithEmailAndPassword;
     window.fbSignOut = signOut;
     window.fbOnAuth = onAuthStateChanged;
+    window.fbUpdateEmail = updateEmail;
+    window.fbUpdatePassword = updatePassword;
     window.fbReady = true;
     window.fbCurrentUser = null;
     window.currentRole = null;
@@ -1434,23 +1694,37 @@ table.inv-prod td.num{
           💡 <kbd>Ctrl+Click</kbd> • <kbd>Shift+Click</kbd> • <kbd>Ctrl+A</kbd>
         </span>
       </div>
-      <div class="toolbar">
+            <div class="toolbar">
+        <select class="stage-filter" id="stage-pending" onchange="renderTable('pending')">
+          <option value="">🌍 كل المراحل</option>
+          <option value="بحري">🌊 بحري</option>
+          <option value="قبلي">🏜️ قبلي</option>
+          <option value="داخلي">🏙️ داخلي</option>
+          <option value="داخلي مناديب">🚚 داخلي مناديب</option>
+        </select>
         <input type="search" id="search-pending" placeholder="🔍 بحث بالاسم / الكود / المحمول / المنطقة...">
       </div>
-      <div class="bulk-bar" id="bulk-pending">
+         <div class="bulk-bar" id="bulk-pending">
         <span class="cnt"><b id="bulk-count-pending">0</b> محدد</span>
         <button class="btn green sm" data-bulk="deliver">✅ تسليم المحدد</button>
         <button class="btn red sm" data-bulk="cancel">🚫 إلغاء المحدد</button>
         <button class="btn primary sm" data-bulk="print">🖨️ طباعة المحدد</button>
         <button class="btn grey sm" data-bulk="delete">🗑 حذف المحدد</button>
+        <button class="btn sm" style="background:#8b5cf6;color:#fff;" data-bulk="toDrivers" id="bulkToDriversBtn">🚚 نقل لداخلي مناديب</button>
+        <button class="btn sm" style="background:#a78bfa;color:#fff;display:none;" data-bulk="fromDrivers" id="bulkFromDriversBtn">↩️ رجوع من داخلي مناديب</button>
         <button class="btn grey sm" data-bulk="clear" style="margin-inline-start:auto">✕ إلغاء التحديد</button>
       </div>
-      <div class="table-wrap">
-        <table class="tbl">
+            <div class="table-wrap">
+        <table class="tbl compact">
           <thead><tr>
             <th class="col-check"><input type="checkbox" class="select-all" data-status="pending"></th>
-            <th>الكود</th><th>العميل</th><th>المحمول</th><th>الصفحة</th><th>المنطقة</th>
-            <th>العنوان</th><th>المنتج</th><th>الإجمالي</th><th>التاريخ</th><th>إجراءات</th>
+            <th>الطلب</th>
+            <th>الموقع</th>
+            <th>المرحلة والعنوان</th>
+            <th>المنتج</th>
+            <th>الإجمالي</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
           </tr></thead>
           <tbody id="body-pending"></tbody>
         </table>
@@ -1468,7 +1742,14 @@ table.inv-prod td.num{
           💡 <kbd>Ctrl+Click</kbd> • <kbd>Shift+Click</kbd> • <kbd>Ctrl+A</kbd>
         </span>
       </div>
-      <div class="toolbar">
+            <div class="toolbar">
+        <select class="stage-filter" id="stage-delivered" onchange="renderTable('delivered')">
+          <option value="">🌍 كل المراحل</option>
+          <option value="بحري">🌊 بحري</option>
+          <option value="قبلي">🏜️ قبلي</option>
+          <option value="داخلي">🏙️ داخلي</option>
+          <option value="داخلي مناديب">🚚 داخلي مناديب</option>
+        </select>
         <input type="search" id="search-delivered" placeholder="🔍 بحث في التسليمات...">
       </div>
       <div class="bulk-bar" id="bulk-delivered">
@@ -1480,12 +1761,18 @@ table.inv-prod td.num{
         <button class="btn grey sm" data-bulk="delete">🗑 حذف المحدد</button>
         <button class="btn grey sm" data-bulk="clear" style="margin-inline-start:auto">✕ إلغاء التحديد</button>
       </div>
-      <div class="table-wrap">
-        <table class="tbl">
+            <div class="table-wrap">
+        <table class="tbl compact">
           <thead><tr>
             <th class="col-check"><input type="checkbox" class="select-all" data-status="delivered"></th>
-            <th>الكود</th><th>العميل</th><th>المحمول</th><th>الصفحة</th><th>المنطقة</th>
-            <th>العنوان</th><th>المنتج</th><th>الإجمالي</th><th>الحساب</th><th>تاريخ التسليم</th><th>إجراءات</th>
+            <th>الطلب</th>
+            <th>الموقع</th>
+            <th>المرحلة والعنوان</th>
+            <th>المنتج</th>
+            <th>الإجمالي</th>
+            <th>الحساب</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
           </tr></thead>
           <tbody id="body-delivered"></tbody>
         </table>
@@ -1503,7 +1790,14 @@ table.inv-prod td.num{
           💡 <kbd>Ctrl+Click</kbd> • <kbd>Shift+Click</kbd> • <kbd>Ctrl+A</kbd>
         </span>
       </div>
-      <div class="toolbar">
+            <div class="toolbar">
+        <select class="stage-filter" id="stage-cancelled" onchange="renderTable('cancelled')">
+          <option value="">🌍 كل المراحل</option>
+          <option value="بحري">🌊 بحري</option>
+          <option value="قبلي">🏜️ قبلي</option>
+          <option value="داخلي">🏙️ داخلي</option>
+          <option value="داخلي مناديب">🚚 داخلي مناديب</option>
+        </select>
         <input type="search" id="search-cancelled" placeholder="🔍 بحث في الملغيين...">
       </div>
       <div class="bulk-bar" id="bulk-cancelled">
@@ -1515,12 +1809,18 @@ table.inv-prod td.num{
         <button class="btn grey sm" data-bulk="delete">🗑 حذف المحدد</button>
         <button class="btn grey sm" data-bulk="clear" style="margin-inline-start:auto">✕ إلغاء التحديد</button>
       </div>
-      <div class="table-wrap">
-        <table class="tbl">
+            <div class="table-wrap">
+        <table class="tbl compact">
           <thead><tr>
             <th class="col-check"><input type="checkbox" class="select-all" data-status="cancelled"></th>
-            <th>الكود</th><th>العميل</th><th>المحمول</th><th>الصفحة</th><th>المنطقة</th>
-            <th>العنوان</th><th>المنتج</th><th>الإجمالي</th><th>الحساب</th><th>تاريخ الإلغاء</th><th>إجراءات</th>
+            <th>الطلب</th>
+            <th>الموقع</th>
+            <th>المرحلة والعنوان</th>
+            <th>المنتج</th>
+            <th>الإجمالي</th>
+            <th>الحساب</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
           </tr></thead>
           <tbody id="body-cancelled"></tbody>
         </table>
@@ -1754,6 +2054,45 @@ const num = v => { const n = parseFloat(String(v).replace(/,/g,'')); return isNa
 const money = n => Number(n||0).toLocaleString('en-US', {maximumFractionDigits:2});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const AR_DAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+/* =========================================================
+   🗺️ تصنيف المحافظات (نفس نظام MEDORA + القليوبية داخلي)
+   ========================================================= */
+const GOVERNORATE_CLASSIFICATION = {
+  'داخلي': ['القاهرة', 'الجيزة', 'القليوبية'],
+  'بحري': [
+    'الإسكندرية', 'الدقهلية', 'الشرقية', 'الغربية', 'المنوفية',
+    'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس'
+  ],
+  'قبلي': [
+    'بني سويف', 'الفيوم', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر',
+    'أسوان', 'البحر الأحمر', 'الوادي الجديد', 'مطروح',
+    'شمال سيناء', 'جنوب سيناء'
+  ]
+};
+
+/**
+ * يحسب مرحلة الطلب:
+ * - لو deliveryMode === 'driver' → 'داخلي مناديب'
+ * - غير كده → المرحلة حسب المحافظة
+ */
+function getOrderStage(order){
+  if (!order) return 'داخلي';
+  if (order.deliveryMode === 'driver') return 'داخلي مناديب';
+  const gov = String(order.governorate || '').trim();
+  for (const [stage, govs] of Object.entries(GOVERNORATE_CLASSIFICATION)) {
+    if (govs.includes(gov)) return stage;
+  }
+  return 'داخلي'; // fallback
+}
+
+function getStageClass(stage){
+  return {
+    'بحري':           'stage-bahari',
+    'قبلي':           'stage-qibli',
+    'داخلي':          'stage-dakhli',
+    'داخلي مناديب':   'stage-drivers'
+  }[stage] || 'stage-dakhli';
+}
 function todayISO(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 function dayFromISO(iso){ if(!iso) return ''; const d=new Date(iso+'T00:00:00'); return isNaN(d)?'':(AR_DAYS[d.getDay()]||''); }
 function fmtDate(iso){
@@ -1814,8 +2153,109 @@ function normalizePhone(v){
 
   return s;
 }
+/* ═══════════════════════════════════════════════════════════
+   🔀 splitMulti — يقبل الشحطة "-" بمسافة أو بدون
+   أمثلة:
+     "منتج1-منتج2"  ✓
+     "منتج1 - منتج2" ✓
+     "منتج1- منتج2"  ✓
+     "منتج1 -منتج2"  ✓
+   ═══════════════════════════════════════════════════════════ */
 function splitMulti(v){
-  return String(v||'').split(/\s+-\s+/).map(s => s.trim()).filter(s => s !== '');
+  return String(v||'')
+    .split(/\s*-\s*/)
+    .map(s => s.trim())
+    .filter(s => s !== '');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🔤 تطبيع النص العربي + المطابقة الضبابية
+   ═══════════════════════════════════════════════════════════ */
+function normalizeArabic(s){
+  return String(s == null ? '' : s)
+    .trim()
+    .replace(/[أإآا]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[ًٌٍَُِّْـ]/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if(!m) return n;
+  if(!n) return m;
+  const dp = Array.from({length: m+1}, () => new Array(n+1).fill(0));
+  for(let i = 0; i <= m; i++) dp[i][0] = i;
+  for(let j = 0; j <= n; j++) dp[0][j] = j;
+  for(let i = 1; i <= m; i++){
+    for(let j = 1; j <= n; j++){
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i-1][j] + 1,
+        dp[i][j-1] + 1,
+        dp[i-1][j-1] + cost
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function getAllKnownGovernorates(){
+  const set = new Set();
+  Object.values(GOVERNORATE_CLASSIFICATION).forEach(arr => {
+    arr.forEach(g => set.add(g));
+  });
+  return [...set];
+}
+
+/**
+ * يبحث عن أفضل تطابق لمحافظة.
+ * يرجع: { name, confidence, exact } أو null لو مفيش أي تشابه
+ * - exact: تطابق حرفي
+ * - confidence: 0..1
+ */
+function findBestGovernorate(raw){
+  if(!raw) return null;
+  const norm = normalizeArabic(raw);
+  const known = getAllKnownGovernorates();
+
+  // 1) تطابق حرفي
+  for(const g of known){
+    if(normalizeArabic(g) === norm){
+      return { name: g, confidence: 1, exact: true };
+    }
+  }
+
+  // 2) احتواء
+  for(const g of known){
+    const ng = normalizeArabic(g);
+    if(ng.includes(norm) || norm.includes(ng)){
+      return { name: g, confidence: 0.92, exact: false };
+    }
+  }
+
+  // 3) أقرب تطابق بالمسافة النصية
+  let best = null, bestDist = Infinity;
+  for(const g of known){
+    const dist = levenshtein(normalizeArabic(g), norm);
+    if(dist < bestDist){ bestDist = dist; best = g; }
+  }
+  if(!best) return null;
+  const maxLen = Math.max(normalizeArabic(best).length, norm.length) || 1;
+  const confidence = 1 - (bestDist / maxLen);
+  return { name: best, confidence, exact: false };
+}
+
+/**
+ * هل نقبل التصحيح تلقائياً؟ (فرق حرف واحد أو اثنين)
+ * الحد: 0.7 يعني 70% تشابه على الأقل
+ */
+function isGovernorateAutoCorrectable(match){
+  if(!match) return false;
+  if(match.exact) return true;
+  return match.confidence >= 0.7;
 }
 function buildItemsFromRow(row){
   const names  = splitMulti(row[11]);
@@ -3526,6 +3966,56 @@ function validateOrderData(o, existingOrders){
   return w;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   🚫 showBlockingErrors — مودال أخطاء مانعة للحفظ
+   ═══════════════════════════════════════════════════════════ */
+function showBlockingErrors(errors, context){
+  return new Promise(resolve => {
+    let html = `
+      <div class="hint" style="background:linear-gradient(135deg,#fee2e2,#fecaca);border-color:#fca5a5;color:#b91c1c;margin-bottom:14px;">
+        <b style="font-size:13.5px">⛔ فيه ${errors.length} خطأ يمنع الحفظ</b><br>
+        ${context || 'صحّح البيانات وأعد المحاولة.'}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto">
+    `;
+
+    errors.forEach(err => {
+      const msgHtml = esc(err.msg || '').replace(/\n/g, '<br>');
+      html += `
+        <div style="background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 14px;">
+          <div style="font-size:11.5px;font-weight:800;color:#b91c1c;margin-bottom:4px">
+            ❌ صف ${err.row}${err.field ? ` • ${err.field}` : ''}
+          </div>
+          <div style="font-size:12.5px;font-weight:700;color:#1e293b;line-height:1.7">${msgHtml}</div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+
+    $('#warningBody').innerHTML = html;
+    $('#warningModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // إخفاء زر المتابعة (لأنه خطأ مانع)
+    const continueBtn = $('#continueSaveBtn');
+    const origDisplay = continueBtn ? continueBtn.style.display : '';
+    if(continueBtn) continueBtn.style.display = 'none';
+
+    const cleanup = () => {
+      $('#warningModal').classList.remove('open');
+      document.body.style.overflow = '';
+      if(continueBtn) continueBtn.style.display = origDisplay;
+    };
+
+    document.querySelectorAll('[data-close-warning]').forEach(b => {
+      b.onclick = () => { cleanup(); resolve(false); };
+    });
+
+    resolve(false);  // دايماً نرفض
+  });
+}
+
 function showWarnings(warnings, context){
   return new Promise(resolve => {
     const groups = { duplicate:[], phone:[], missing:[], data:[] };
@@ -3596,6 +4086,7 @@ async function saveAllFromGrid(){
 
   const pendingOrders = [];
   const allWarnings = [];
+  const allErrors = [];   // 🆕 أخطاء مانعة للحفظ
   const pageCounters = {};
 
   gridData.forEach((row, idx) => {
@@ -3631,6 +4122,38 @@ async function saveAllFromGrid(){
       dateISO = `${yy}-${mm}-${dd}`;
     }
 
+    
+
+        // ═══════════════════════════════════════════════════════
+    // 🗺️ التحقق من المحافظة — تصحيح ضبابي أو رفض الحفظ
+    // ═══════════════════════════════════════════════════════
+    const govRaw = (row[3]||'').trim();
+    let correctedGov = govRaw;
+    if(!govRaw){
+      allErrors.push({ row: idx+1, field: 'المحافظة', msg: 'المحافظة مطلوبة — اكتبها في العمود 4' });
+      return; // تجاهل الصف ده
+    }
+    const govMatch = findBestGovernorate(govRaw);
+    if(!govMatch){
+      allErrors.push({ row: idx+1, field: 'المحافظة', msg: `المحافظة "${govRaw}" غير معروفة ولا يوجد أي تشابه` });
+      return;
+    }
+    if(!isGovernorateAutoCorrectable(govMatch)){
+      allErrors.push({
+        row: idx+1, field: 'المحافظة',
+        msg: `المحافظة "${govRaw}" غير صحيحة.\nأقرب تطابق: "${govMatch.name}" (تشابه ${Math.round(govMatch.confidence*100)}%).\nصحّح الكتابة وأعد المحاولة.`
+      });
+      return;
+    }
+    // ✅ تصحيح تلقائي
+    correctedGov = govMatch.name;
+    if(govRaw !== govMatch.name){
+      allWarnings.push({
+        type: 'data', row: idx+1, field: 'تصحيح المحافظة',
+        msg: `المحافظة "${govRaw}" تم تصحيحها تلقائياً إلى "${govMatch.name}"`
+      });
+    }
+
     const items = buildItemsFromRow(row);
     const shipping = num(row[14]);
     const subtotal = items.reduce((s,i) => s + i.qty*i.price, 0);
@@ -3644,7 +4167,7 @@ async function saveAllFromGrid(){
       pagePhone: page.phone || '',
       customerName: name, mobile,
       landline: normalizePhone((row[2]||'').trim()),
-      governorate: (row[3]||'').trim(),
+      governorate: correctedGov,
       area: (row[4]||'').trim(),
       address: (row[5]||'').trim(),
       note: '',
@@ -3667,6 +4190,13 @@ async function saveAllFromGrid(){
 
     pendingOrders.push({ order, page });
   });
+
+   // 🚫 لو فيه أخطاء → امنع الحفظ تماماً
+  if(allErrors.length){
+    await showBlockingErrors(allErrors, `عدد الطلبات اللي فيها أخطاء: <b>${allErrors.length}</b>. صحّح البيانات وأعد المحاولة.`);
+    toast('⛔ لم يتم حفظ أي طلب — صحّح الأخطاء أولاً');
+    return;
+  }
 
   if(!pendingOrders.length){
     toast('⚠️ لا توجد بيانات للحفظ');
@@ -3786,6 +4316,18 @@ f_date.addEventListener('change', () => { f_day.value = dayFromISO(f_date.value)
 f_mobile.addEventListener('blur', () => { f_mobile.value = normalizePhone(f_mobile.value); });
 f_landline.addEventListener('blur', () => { f_landline.value = normalizePhone(f_landline.value); });
 
+// 🗺️ تصحيح تلقائي للمحافظة عند الخروج من الحقل
+f_gov.addEventListener('blur', () => {
+  const raw = f_gov.value.trim();
+  if(!raw) return;
+  const match = findBestGovernorate(raw);
+  if(match && isGovernorateAutoCorrectable(match)){
+    if(f_gov.value.trim() !== match.name){
+      f_gov.value = match.name;
+    }
+  }
+});
+
 function addItemRow(data={}){
   const d = Object.assign({name:'',qty:1,price:0}, data);
   const row = document.createElement('div');
@@ -3854,6 +4396,26 @@ async function saveOrder(){
   const page = state.pages.find(p => p.id === f_page.value);
   if(!page){ toast('⚠️ اختر الصفحة'); f_page.focus(); return; }
 
+  // 🗺️ التحقق من المحافظة (مع تصحيح تلقائي)
+  const govRaw = f_gov.value.trim();
+  let correctedGov = govRaw;
+  if(govRaw){
+    const govMatch = findBestGovernorate(govRaw);
+    if(!govMatch || !isGovernorateAutoCorrectable(govMatch)){
+      toast('⛔ المحافظة غير صحيحة — صحّح الكتابة');
+      if(govMatch && govMatch.name){
+        alert(`⚠️ المحافظة "${govRaw}" غير صحيحة.\nأقرب تطابق: "${govMatch.name}"\n\nصحّح الكتابة وأعد المحاولة.`);
+      }
+      f_gov.focus();
+      return;
+    }
+    correctedGov = govMatch.name;
+    if(govRaw !== govMatch.name){
+      f_gov.value = govMatch.name;
+      toast(`✅ تم تصحيح المحافظة إلى "${govMatch.name}"`);
+    }
+  }
+
   const { code, next } = peekCode(page);
   const t = recalc();
   const dateISO = f_date.value || todayISO();
@@ -3864,7 +4426,7 @@ async function saveOrder(){
     id: uid(), code, pageId: page.id, pageName: page.name, pagePhone: page.phone||'',
     customerName: f_name.value.trim(), mobile,
     landline: normalizePhone(f_landline.value),
-    governorate: f_gov.value.trim(),
+    governorate: correctedGov,
     area: f_area.value.trim(),
     address: f_address.value.trim(),
     note: f_note.value.trim(),
@@ -3897,9 +4459,9 @@ async function saveOrder(){
    TABLE RENDER
    ========================================================= */
 const LIST_VIEWS = {
-  pending:   { tbody:'#body-pending',   empty:'#empty-pending',   search:'#search-pending',   bulk:'#bulk-pending' },
-  delivered: { tbody:'#body-delivered', empty:'#empty-delivered', search:'#search-delivered', bulk:'#bulk-delivered' },
-  cancelled: { tbody:'#body-cancelled', empty:'#empty-cancelled', search:'#search-cancelled', bulk:'#bulk-cancelled' }
+  pending:   { tbody:'#body-pending',   empty:'#empty-pending',   search:'#search-pending',   stage:'#stage-pending',   bulk:'#bulk-pending' },
+  delivered: { tbody:'#body-delivered', empty:'#empty-delivered', search:'#search-delivered', stage:'#stage-delivered', bulk:'#bulk-delivered' },
+  cancelled: { tbody:'#body-cancelled', empty:'#empty-cancelled', search:'#search-cancelled', stage:'#stage-cancelled', bulk:'#bulk-cancelled' }
 };
 function itemsSummary(items){
   if(!items || !items.length) return '—';
@@ -3917,34 +4479,93 @@ function actionButtons(o){
   const inv = `<button class="mini inv" data-action="invoice" data-id="${o.id}">🧾</button>`;
   const del = `<button class="mini rm" data-action="delete" data-id="${o.id}">🗑</button>`;
   if(o.status === 'pending'){
-    return inv
+    const driverBtn = o.deliveryMode === 'driver'
+      ? `<button class="mini" style="background:#e9d5ff;color:#6b21a8;" data-action="undriver" data-id="${o.id}" title="إرجاع لمرحلة الشحن">↩🚚</button>`
+      : `<button class="mini" style="background:#f3e8ff;color:#6b21a8;" data-action="driver" data-id="${o.id}" title="نقل لداخلي مناديب">🚚</button>`;
+    return inv + driverBtn
       + `<button class="mini ok" data-action="deliver" data-id="${o.id}">✅</button>`
       + `<button class="mini no" data-action="cancel" data-id="${o.id}">🚫</button>` + del;
   }
   return inv
     + `<button class="mini back" data-action="restore" data-id="${o.id}">↩</button>` + del;
 }
-/* 🎯 ترتيب الطلبات حسب آخر إجراء متخذ */
+/* 🎯 ترتيب الطلبات:
+   1) غير المُسوّاة أولاً (الأحدث أولاً)
+   2) المُسوّاة في الآخر (الأحدث أولاً برضه)
+*/
 function sortByAction(list){
   return list.slice().sort((a, b) => {
+    // 🎯 الطلبات المُسوّاة دايماً في الآخر
+    const aSettled = a.settled ? 1 : 0;
+    const bSettled = b.settled ? 1 : 0;
+    if(aSettled !== bSettled) return aSettled - bSettled;
+
+    // داخل كل مجموعة: الأحدث أولاً (حسب آخر إجراء)
     const aTime = a.statusAt || a.createdAt || '';
     const bTime = b.statusAt || b.createdAt || '';
     return String(bTime).localeCompare(String(aTime));
   });
 }
+/* ═══════════════════════════════════════════════════════
+   🎯 تحديث حالة مربع "تحديد الكل" (checked / indeterminate)
+   ═══════════════════════════════════════════════════════ */
+function updateSelectAllState(status){
+  const cfg = LIST_VIEWS[status];
+  if(!cfg) return;
+  const cb = document.querySelector(`.select-all[data-status="${status}"]`);
+  if(!cb) return;
+
+  // نفس فلتر renderTable
+  const pf = window._currentPageFilter || '';
+  const q = ($(cfg.search)?.value || '').trim();
+  const stageVal = ($(cfg.stage)?.value || '').trim();
+
+  let list = state.orders.filter(o => o.status === status);
+  if(pf) list = list.filter(o => o.pageId === pf);
+  if(stageVal) list = list.filter(o => getOrderStage(o) === stageVal);
+  list = list.filter(o => matches(o, q));
+
+  const total = list.length;
+  const selCount = list.filter(o => selected.has(o.id)).length;
+
+  if(total === 0){
+    cb.checked = false;
+    cb.indeterminate = false;
+    cb.disabled = true;
+    cb.style.opacity = '0.4';
+    cb.style.cursor = 'not-allowed';
+  } else {
+    cb.disabled = false;
+    cb.style.opacity = '1';
+    cb.style.cursor = 'pointer';
+    if(selCount === 0){
+      cb.checked = false;
+      cb.indeterminate = false;
+    } else if(selCount === total){
+      cb.checked = true;
+      cb.indeterminate = false;
+    } else {
+      cb.checked = false;
+      cb.indeterminate = true;   // ← الحالة الجزئية 🎯
+    }
+  }
+}
 function renderTable(status){
   const cfg = LIST_VIEWS[status];
   const tbody = $(cfg.tbody), empty = $(cfg.empty);
   const q = ($(cfg.search)?.value || '').trim();
+  const stageVal = ($(cfg.stage)?.value || '').trim();   // 🆕 فلتر المرحلة
   const pf = window._currentPageFilter || '';
   let list = state.orders.filter(o => o.status === status);
   if(pf) list = list.filter(o => o.pageId === pf);
+  if(stageVal) list = list.filter(o => getOrderStage(o) === stageVal);  // 🆕
   list = list.filter(o => matches(o, q));
-  list = sortByAction(list);   // 🎯 الترتيب بالأحدث إجراءً أولاً
+  list = sortByAction(list);
 
   if(!list.length){
     tbody.innerHTML='';
     empty.style.display='block';
+    updateSelectAllState(status);
     updateBulkBar(status);
     return;
   }
@@ -3992,32 +4613,51 @@ function renderTable(status){
 const editedBadge = (o.editHistory && o.editHistory.length)
   ? `<span class="edit-badge" title="آخر تعديل: ${new Date(o.editHistory[o.editHistory.length-1].at).toLocaleString('ar-EG')}">✏️ ${o.editHistory.length}</span>`
   : '';
-const rowClass = (isSel ? 'selected ' : '') + (o.printedAt ? 'row-printed' : '');
+const isDriver = o.deliveryMode === 'driver';
+const rowClass = (isSel ? 'selected ' : '')
+               + (o.printedAt ? 'row-printed ' : '')
+               + (isDriver ? 'row-driver' : '');
 
-return `
+    return `
 <tr data-oid="${o.id}" data-status="${status}" class="${rowClass}">
   <td class="col-check"><input type="checkbox" class="row-check" data-status="${status}" data-id="${o.id}" ${isSel?'checked':''}></td>
-  <td><span class="code">${esc(o.code)}</span>${settledMark}${printedBadge}${editedBadge}</td>
-  <td><b>${esc(o.customerName)}</b></td>
-  <td dir="ltr" style="white-space:nowrap">${esc(o.mobile)}</td>
-  <td><span class="pill">${esc(o.pageName)}</span></td>
-  <td>${esc(o.area||'—')}</td>
-  <td class="addr" title="${esc(o.address)}">${esc(o.address)}</td>
+  <td>
+    <div class="td-stack">
+      <span><span class="code">${esc(o.code)}</span>${settledMark}${printedBadge}${editedBadge}</span>
+      <span class="main">${esc(o.customerName)}</span>
+      <span class="sub sub-ltr">${esc(o.mobile)}</span>
+    </div>
+  </td>
+  <td>
+    <div class="td-stack">
+      <span class="pill">${esc(o.pageName)}</span>
+      <span class="sub">📍 ${esc(o.governorate||'—')}</span>
+      <span class="sub">${esc(o.area||'—')}</span>
+    </div>
+  </td>
+  <td>
+    <div class="td-stack">
+      <span class="stage-badge ${getStageClass(getOrderStage(o))}">${getOrderStage(o)}</span>
+      <span class="addr-line" title="${esc(o.address)}">${esc(o.address||'—')}</span>
+    </div>
+  </td>
   <td>${itemsSummary(o.items)}</td>
   <td class="money">${money(o.total)}</td>
   ${accCell}
-  <td style="white-space:nowrap">${fmtDate(o.statusAt || o.date)}</td>
-  <td><div class="actions">
-    <button class="mini view" data-action="edit" data-id="${o.id}" title="عرض تفاصيل الطلب">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
-    </button>
-    ${actionButtons(o)}
-  </div></td>
+  <td style="white-space:nowrap;font-size:11px">${fmtDate(o.statusAt || o.date)}</td>
+    <td>
+    <div class="td-actions">
+      <button class="mini view" data-action="edit" data-id="${o.id}" title="عرض تفاصيل الطلب">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+    </div>
+  </td>
 </tr>`;
   }).join('');
+  updateSelectAllState(status);
   updateBulkBar(status);
 }
 
@@ -4040,51 +4680,88 @@ function selectedInView(status){
 }
 function updateBulkBar(status){
   if(!status){ ['pending','delivered','cancelled'].forEach(updateBulkBar); return; }
-   const bar = $(LIST_VIEWS[status].bulk);
+  const bar = $(LIST_VIEWS[status].bulk);
   const cnt = $('#bulk-count-' + status);
   const list = selectedInView(status);
   const n = list.length;
   if(n > 0){
     bar.classList.add('show');
     cnt.textContent = n;
+
+    // 🚚 تبديل أزرار المناديب حسب نوع المحدد
+    if(status === 'pending'){
+      const hasDriver    = list.some(o => o.deliveryMode === 'driver');
+      const hasNonDriver = list.some(o => o.deliveryMode !== 'driver');
+      const toBtn   = document.getElementById('bulkToDriversBtn');
+      const fromBtn = document.getElementById('bulkFromDriversBtn');
+      if(toBtn)   toBtn.style.display   = hasNonDriver ? '' : 'none';
+      if(fromBtn) fromBtn.style.display = hasDriver    ? '' : 'none';
+    }
   } else {
     bar.classList.remove('show');
   }
 }
 
 document.addEventListener('change', e => {
+  // ═══ Checkbox فردي ═══
   if(e.target.matches('.row-check')){
     const id = e.target.dataset.id;
     if(e.target.checked) selected.add(id); else selected.delete(id);
     const tr = e.target.closest('tr');
     if(tr) tr.classList.toggle('selected', e.target.checked);
     lastClickedId = id;
-    updateBulkBar(e.target.dataset.status);
+
+    const st = e.target.dataset.status;
+
+    // 🎯 1) تفعيل/إلغاء تحديد الصف فوراً في الـ DOM
+    if(tr) tr.classList.toggle('selected', e.target.checked);
+
+    // 🎯 2) نضيف/نشيل من الـ selected Set
+    if(e.target.checked) selected.add(id); else selected.delete(id);
+
+    // 🎯 3) نعيد رسم الصفوف عشان الخلفية الزرقا تتحدّث
+    //    (بدون ده ممكن الصف يتحدّث جزئياً بس الـ select-all مياخدش باله)
+    renderTable(st);
+
+    // 🎯 4) نحدّث حالة "تحديد الكل" (checked / indeterminate / فاضي)
+    updateSelectAllState(st);
+    updateBulkBar(st);
+    return;
   }
-    if(e.target.matches('.select-all')){
+
+  // ═══ تحديد الكل ═══
+  if(e.target.matches('.select-all')){
     const status = e.target.dataset.status;
     const pf = window._currentPageFilter || '';
-    let list = state.orders.filter(o => o.status === status);
-    if(pf) list = list.filter(o => o.pageId === pf);
     const cfg = LIST_VIEWS[status];
     const q = ($(cfg.search)?.value || '').trim();
+    const stageVal = ($(cfg.stage)?.value || '').trim();
+
+    let list = state.orders.filter(o => o.status === status);
+    if(pf) list = list.filter(o => o.pageId === pf);
+    if(stageVal) list = list.filter(o => getOrderStage(o) === stageVal);   // 🆕 فلتر المرحلة
     list = list.filter(o => matches(o, q));
-    list.forEach(o => { if(e.target.checked) selected.add(o.id); else selected.delete(o.id); });
+
+    list.forEach(o => {
+      if(e.target.checked) selected.add(o.id);
+      else selected.delete(o.id);
+    });
+
     renderTable(status);
   }
 });
 
 document.addEventListener('click', e => {
+  // تجاهل الضغط على الأزرار والحقول
   if(e.target.closest('button, input, select, a, .acc-wrap, .col-check, textarea, [contenteditable]')) return;
+
   const tr = e.target.closest('tr[data-oid]');
   if(!tr) return;
+
   const id = tr.dataset.oid;
   const status = tr.dataset.status;
-  const hasModifier = e.ctrlKey || e.metaKey || e.shiftKey;
 
-  // 🎯 التحديد بـ Ctrl/Meta أو Shift فقط — الضغطة العادية متعمل حاجة
-  if(!hasModifier) return;
-
+  // ═══ Shift+Click → تحديد نطاق ═══
   if(e.shiftKey && lastClickedId){
     const tbody = tr.parentElement;
     const rows = [...tbody.querySelectorAll('tr[data-oid]')];
@@ -4095,9 +4772,26 @@ document.addEventListener('click', e => {
       const from = Math.min(a,b), to = Math.max(a,b);
       for(let i = from; i <= to; i++) selected.add(ids[i]);
     }
-  } else if(e.ctrlKey || e.metaKey){
-    if(selected.has(id)) selected.delete(id); else selected.add(id);
+    lastClickedId = id;
+    renderTable(status);
+    return;
   }
+
+  // ═══ Ctrl+Click → toggle (بداية التحديد) ═══
+  if(e.ctrlKey || e.metaKey){
+    if(selected.has(id)) selected.delete(id); else selected.add(id);
+    lastClickedId = id;
+    renderTable(status);
+    return;
+  }
+
+  // ═══ ضغطة عادية ═══
+  // 🎯 تشتغل بس لو فيه تحديد بالفعل (اتعمل بـ Ctrl أو checkbox)
+  // لو مفيش تحديد → مش هتعمل حاجة (زي الأول)
+  if(selected.size === 0) return;
+
+  // لو فيه تحديد → toggle الصف
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
   lastClickedId = id;
   renderTable(status);
 });
@@ -4150,6 +4844,46 @@ document.addEventListener('click', e => {
 
   if(action === 'print'){ printSelectedInvoices(ids); return; }
   if(action === 'settle'){ openSettlementModal(ids); return; }
+
+    if(action === 'fromDrivers'){
+    const driverOrders = ids.map(id => state.orders.find(x => x.id === id))
+      .filter(o => o && o.deliveryMode === 'driver');
+    if(!driverOrders.length){
+      toast('⚠️ لا يوجد طلبات في داخلي مناديب بين المحدد');
+      return;
+    }
+    if(!confirm(`↩️ رجوع ${driverOrders.length} طلب من "داخلي مناديب" إلى مراحل شركة الشحن؟`)) return;
+    const codes = [];
+    driverOrders.forEach(o => {
+      delete o.deliveryMode;
+      delete o.movedToDriversAt;
+      codes.push(o.code);
+    });
+    selected.clear();
+    lastClickedId = null;
+    saveState(); renderAll();
+    alert(`↩️ تم رجوع ${driverOrders.length} طلب من داخلي مناديب\n\nالأكواد: ${codes.slice(0,10).join(', ')}${codes.length>10?' ...':''}`);
+    return;
+  }
+
+
+    if(action === 'toDrivers'){
+    if(!confirm(`🚚 نقل ${ids.length} طلب إلى "داخلي مناديب"؟\n\nسيتم إخراجهم من مراحل شركة الشحن (بحري/قبلي/داخلي).`)) return;
+    const codes = [];
+    ids.forEach(id => {
+      const o = state.orders.find(x => x.id === id);
+      if(o){
+        o.deliveryMode = 'driver';
+        o.movedToDriversAt = new Date().toISOString();
+        codes.push(o.code);
+      }
+    });
+    selected.clear();
+    lastClickedId = null;
+    saveState(); renderAll();
+    alert(`✅ تم نقل ${ids.length} طلب لداخلي مناديب\n\nالأكواد: ${codes.slice(0,10).join(', ')}${codes.length>10?' ...':''}`);
+    return;
+  }
   
   if(action === 'delete'){
     if(!confirm(`🗑 حذف ${ids.length} طلب نهائياً؟\n\n⚠️ لا يمكن التراجع عن هذه العملية!`)) return;
@@ -4214,6 +4948,22 @@ document.addEventListener('click', e => {
 
    if(action === 'invoice'){ openInvoice(o); return; }
   if(action === 'edit'){ openOrderView(o.id); return; }
+    if(action === 'driver'){
+    if(!confirm(`🚚 نقل الطلب ${o.code} إلى "داخلي مناديب"؟\n\nهيخرج من مراحل شركة الشحن.`)) return;
+    o.deliveryMode = 'driver';
+    o.movedToDriversAt = new Date().toISOString();
+    saveState(); renderAll();
+    alert(`✅ تم نقل ${o.code} لداخلي مناديب`);
+    return;
+  }
+  if(action === 'undriver'){
+    if(!confirm(`↩️ إرجاع الطلب ${o.code} لمرحلة الشحن العادية؟`)) return;
+    delete o.deliveryMode;
+    delete o.movedToDriversAt;
+    saveState(); renderAll();
+    alert(`↩️ تم إرجاع ${o.code} لمراحل الشحن`);
+    return;
+  }
   
   if(action === 'deliver'){
     if(!confirm(`📦 نقل الطلب إلى التسليمات؟\n\nالكود: ${o.code}\nالعميل: ${o.customerName}\nالمحمول: ${o.mobile}`)) return;
@@ -5306,30 +6056,64 @@ $('#savePageCredBtn').addEventListener('click', async () => {
 
   msg.style.color = '#dc2626';
 
+  // ═══ التحقق من المدخلات ═══
   if(!newEmail && !newPass){ msg.textContent = '⚠️ اكتب إيميل جديد أو باسورد جديد'; return; }
   if(newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){ msg.textContent = '⚠️ صيغة الإيميل غير صحيحة'; return; }
   if(newPass && newPass.length < 6){ msg.textContent = '⚠️ كلمة المرور 6 حروف على الأقل'; return; }
   if(!oldPass){ msg.textContent = '⚠️ اكتب كلمة المرور الحالية للتحقق'; return; }
-  if(!window.fbReady || !window.fbSecondaryAuth){ msg.textContent = '❌ Firebase غير جاهز'; return; }
+  if(!oldEmail){ msg.textContent = '⚠️ مفيش إيميل محفوظ للصفحة — تواصل مع الأدمن'; return; }
+  if(!window.fbReady || !window.fbSecondaryAuth){ msg.textContent = '❌ Firebase غير جاهز — حاول تحدّث الصفحة'; return; }
 
   const btn = $('#savePageCredBtn');
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = '⏳ جاري الحفظ...';
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    // 1) سجّل الدخول بالحساب القديم على Secondary auth
-    const cred = await window.fbSignIn(window.fbSecondaryAuth, oldEmail, oldPass);
+    // 🧹 1) نظّف أي جلسة سابقة على Secondary Auth
+    try { await window.fbSignOut(window.fbSecondaryAuth); } catch(_){}
+
+    // 2) سجّل الدخول بالحساب القديم
+    let cred;
+    try {
+      cred = await window.fbSignIn(window.fbSecondaryAuth, oldEmail, oldPass);
+    } catch(signErr){
+      const loginMsgs = {
+        'auth/invalid-credential':     'كلمة المرور الحالية غير صحيحة',
+        'auth/wrong-password':         'كلمة المرور الحالية غير صحيحة',
+        'auth/user-not-found':         'لا يوجد حساب Firebase بهذا الإيميل',
+        'auth/invalid-email':          'صيغة الإيميل غير صحيحة',
+        'auth/too-many-requests':      'محاولات كثيرة — استنى دقيقة وجرّب تاني',
+        'auth/network-request-failed': 'مشكلة في الإنترنت — راجع اتصالك'
+      };
+      throw {
+        code: signErr.code,
+        userMsg: loginMsgs[signErr.code] || signErr.message
+      };
+    }
+
     const user = cred.user;
+    console.log('✅ Signed in:', user.email);
 
-    // 2) حدّث الإيميل لو اتغيّر
+    // 3) حدّث الإيميل لو اتغيّر
     if(newEmail && newEmail !== oldEmail){
-      await user.updateEmail(newEmail);
-    }
-    // 3) حدّث الباسورد لو اتغيّر
-    if(newPass){
-      await user.updatePassword(newPass);
+      try {
+        await window.fbUpdateEmail(user, newEmail);
+      } catch(emErr){
+        throw { code: emErr.code, userMsg: 'فشل تحديث الإيميل: ' + (emErr.message || '') };
+      }
     }
 
-    // 4) حدّث Firestore user doc
+    // 4) حدّث الباسورد لو اتغيّر
+    if(newPass){
+      try {
+        await window.fbUpdatePassword(user, newPass);
+      } catch(pwErr){
+        throw { code: pwErr.code, userMsg: 'فشل تحديث كلمة المرور: ' + (pwErr.message || '') };
+      }
+    }
+
+    // 5) حدّث Firestore
     try {
       await window.fbSetDoc(window.fbDoc(window.fbDb, 'users', user.uid), {
         email: newEmail || oldEmail,
@@ -5340,10 +6124,10 @@ $('#savePageCredBtn').addEventListener('click', async () => {
       }, { merge: true });
     } catch(err){ console.warn('Firestore update failed:', err); }
 
-    // 5) سجّل خروج من Secondary
+    // 6) سجّل خروج من Secondary
     try { await window.fbSignOut(window.fbSecondaryAuth); } catch(_){}
 
-    // 6) حدّث البيانات المحلية
+    // 7) حدّث البيانات المحلية
     p.email = newEmail || oldEmail;
     saveState(); renderPages();
 
@@ -5355,23 +6139,34 @@ $('#savePageCredBtn').addEventListener('click', async () => {
       $('#pageCredModal').classList.remove('open');
       document.body.style.overflow = '';
       _editingCredPageId = null;
-    }, 1200);
+    }, 1400);
 
   } catch(err) {
     console.error('Cred update error:', err);
-    const msgs = {
-      'auth/wrong-password': 'كلمة المرور الحالية غير صحيحة',
-      'auth/invalid-credential': 'بيانات الدخول الحالية غير صحيحة',
-      'auth/user-not-found': 'لا يوجد حساب Firebase بهذا الإيميل',
-      'auth/email-already-in-use': 'الإيميل الجديد مستخدم بالفعل',
-      'auth/invalid-email': 'صيغة الإيميل الجديدة غير صحيحة',
-      'auth/weak-password': 'كلمة المرور الجديدة ضعيفة',
-      'auth/requires-recent-login': 'يجب إعادة تسجيل الدخول — جرّب مرة أخرى'
-    };
-    msg.textContent = '❌ ' + (msgs[err.code] || err.message);
+
+    let finalMsg = err.userMsg;
+    if(!finalMsg){
+      const codeMsgs = {
+        'auth/wrong-password':         'كلمة المرور الحالية غير صحيحة',
+        'auth/invalid-credential':     'كلمة المرور الحالية غير صحيحة',
+        'auth/user-not-found':         'لا يوجد حساب Firebase بهذا الإيميل',
+        'auth/email-already-in-use':   'الإيميل الجديد مستخدم بالفعل',
+        'auth/invalid-email':          'صيغة الإيميل الجديدة غير صحيحة',
+        'auth/weak-password':          'كلمة المرور الجديدة ضعيفة (6 حروف على الأقل)',
+        'auth/requires-recent-login':  'يجب إعادة تسجيل الدخول — جرّب تاني',
+        'auth/network-request-failed': 'مشكلة في الإنترنت',
+        'auth/too-many-requests':      'محاولات كثيرة — استنى شوية'
+      };
+      finalMsg = codeMsgs[err.code] || err.message || 'خطأ غير معروف';
+    }
+
+    msg.style.color = '#dc2626';
+    msg.textContent = '❌ ' + finalMsg;
     try { await window.fbSignOut(window.fbSecondaryAuth); } catch(_){}
+
   } finally {
-    btn.disabled = false; btn.textContent = orig;
+    btn.disabled = false;
+    btn.textContent = orig;
   }
 });
 
